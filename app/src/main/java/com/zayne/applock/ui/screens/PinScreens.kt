@@ -114,19 +114,18 @@ fun PinSetupScreen(onPinConfirmed: (String) -> Unit) {
     }
 }
 
+/**
+ * Kompakte PIN-Eingabe ohne eigenes Vollbild-Layout, zum Einbetten in eine Karte
+ * (z.B. BiometricLockScreen).
+ */
 @Composable
-fun PinEntryScreen(
-    title: String,
+fun PinEntryScreenContent(
     errorText: String?,
     onPinEntered: (String) -> Unit
 ) {
     var current by remember { mutableStateOf("") }
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(title, style = MaterialTheme.typography.titleMedium)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("PIN eingeben", style = MaterialTheme.typography.titleSmall)
         if (errorText != null) {
             Spacer(Modifier.height(8.dp))
             Text(errorText, color = MaterialTheme.colorScheme.error)

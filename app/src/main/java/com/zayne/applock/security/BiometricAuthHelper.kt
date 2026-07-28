@@ -13,11 +13,13 @@ object BiometricAuthHelper {
             BiometricManager.BIOMETRIC_SUCCESS
     }
 
+    const val ERROR_NEGATIVE_BUTTON = BiometricPrompt.ERROR_NEGATIVE_BUTTON
+
     fun authenticate(
         activity: FragmentActivity,
         title: String,
         onSuccess: () -> Unit,
-        onFailedOrError: () -> Unit
+        onError: (errorCode: Int) -> Unit
     ) {
         val executor = ContextCompat.getMainExecutor(activity)
         val callback = object : BiometricPrompt.AuthenticationCallback() {
@@ -26,12 +28,12 @@ object BiometricAuthHelper {
             }
 
             override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                onFailedOrError()
+                onError(errorCode)
             }
 
             override fun onAuthenticationFailed() {
-                // Falscher Fingerabdruck: Prompt bleibt offen, Nutzer kann erneut versuchen
-                // oder über den Negativ-Button auf PIN wechseln.
+                // Falscher Fingerabdruck: das System-Sheet bleibt offen und erlaubt selbst
+                // einen erneuten Versuch, ohne dass wir etwas tun müssen.
             }
         }
         val prompt = BiometricPrompt(activity, executor, callback)

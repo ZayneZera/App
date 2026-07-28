@@ -82,7 +82,7 @@ class LockAccessibilityService : AccessibilityService() {
         val intent = Intent(this, RecentsGuardActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         }
-        startActivity(intent)
+        startActivity(intent, noAnimationOptions())
     }
 
     private fun launchLockOverlay(targetPackage: String) {
@@ -90,8 +90,13 @@ class LockAccessibilityService : AccessibilityService() {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
             putExtra(LockOverlayActivity.EXTRA_TARGET_PACKAGE, targetPackage)
         }
-        startActivity(intent)
+        startActivity(intent, noAnimationOptions())
     }
+
+    // Verhindert die Standard-"neue App öffnet sich"-Slide-Animation, damit die Sperre
+    // wie ein reines Overlay statt wie ein App-Wechsel wirkt.
+    private fun noAnimationOptions(): android.os.Bundle =
+        android.app.ActivityOptions.makeCustomAnimation(this, 0, 0).toBundle()
 
     /**
      * Heuristik: Der Task-Switcher heißt je nach Android-Version/Hersteller unterschiedlich.

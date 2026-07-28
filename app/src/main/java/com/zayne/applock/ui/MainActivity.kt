@@ -6,9 +6,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -16,20 +13,17 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.fragment.app.FragmentActivity
 import com.zayne.applock.AppLockApplication
 import com.zayne.applock.admin.LockDeviceAdminReceiver
 import com.zayne.applock.data.AuthMode
-import com.zayne.applock.security.BiometricAuthHelper
 import com.zayne.applock.ui.screens.AppDetailScreen
 import com.zayne.applock.ui.screens.AppListScreen
+import com.zayne.applock.ui.screens.BiometricLockScreen
 import com.zayne.applock.ui.screens.GlobalSettingsScreen
 import com.zayne.applock.ui.screens.OnboardingScreen
 import com.zayne.applock.ui.screens.OnboardingStep
-import com.zayne.applock.ui.screens.PinEntryScreen
 import com.zayne.applock.ui.screens.PinSetupScreen
 import com.zayne.applock.ui.theme.AppLockTheme
 import com.zayne.applock.util.AppInfoUtil
@@ -42,7 +36,7 @@ import kotlinx.coroutines.withContext
 private sealed class Screen {
     data object Onboarding : Screen()
     data object PinSetup : Screen()
-    data class AuthGate(val error: String? = null) : Screen()
+    data object AuthGate : Screen()
     data object AppList : Screen()
     data class AppDetail(val packageName: String) : Screen()
     data object GlobalSettings : Screen()
@@ -76,7 +70,7 @@ class MainActivity : FragmentActivity() {
 
                 var screen by remember {
                     mutableStateOf<Screen>(
-                        if (!app.pinManager.isPinSet()) Screen.PinSetup else Screen.AuthGate()
+                        if (!app.pinManager.isPinSet()) Screen.PinSetup else Screen.AuthGate
                     )
                 }
 
@@ -100,34 +94,16 @@ class MainActivity : FragmentActivity() {
                     }
 
                     is Screen.AuthGate -> {
-                        var showPinFallback by remember {
-                            mutableStateOf(!BiometricAuthHelper.canUseBiometric(this@MainActivity))
-                        }
-                        if (!showPinFallback) {
-                            LaunchedEffect(Unit) {
-                                BiometricAuthHelper.authenticate(
-                                    activity = this@MainActivity,
-                                    title = "App-Lock entsperren",
-                                    onSuccess = {
-                                        screen = if (onboardingComplete()) Screen.AppList else Screen.Onboarding
-                                    },
-                                    onFailedOrError = { showPinFallback = true }
-                                )
+                        BiometricLockScreen(
+                            activity = this@MainActivity,
+                            title = "App-Lock entsperren",
+                            icon = null,
+                            pinOnly = false,
+                            onVerifyPin = { pin -> app.pinManager.verifyPin(pin) },
+                            onUnlocked = {
+                                screen = if (onboardingComplete()) Screen.AppList else Screen.Onboarding
                             }
-                        }
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            if (showPinFallback) {
-                                PinEntryScreen(title = "PIN eingeben", errorText = current.error) { pin ->
-                                    if (app.pinManager.verifyPin(pin)) {
-                                        screen = if (onboardingComplete()) Screen.AppList else Screen.Onboarding
-                                    } else {
-                                        screen = Screen.AuthGate(error = "Falsche PIN")
-                                    }
-                                }
-                            } else {
-                                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-                            }
-                        }
+                        )
                     }
 
                     is Screen.Onboarding -> {
