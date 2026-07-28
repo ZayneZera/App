@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.zayne.applock.data.AuthMode
 import com.zayne.applock.util.GracePeriods
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun GlobalSettingsScreen(
     defaultGraceMs: Long,
