@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">App-Lock</string>
+    <string name="accessibility_service_description">Erkennt, welche App gerade geöffnet wird, damit gesperrte Apps mit Fingerabdruck/PIN geschützt werden können. Es werden keine Inhalte gelesen oder übertragen.</string>
+</resources>
