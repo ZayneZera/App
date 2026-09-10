@@ -4,7 +4,7 @@ Zeigt permanent die X/Y/Z-Koordinaten des Spielers oben mittig am Bildschirmrand
 
 ## Bauen
 
-Voraussetzungen: JDK 8, Internetzugriff (lädt Minecraft/Yarn/Fabric-Artefakte herunter). Der Gradle Wrapper ist bereits im Projekt enthalten, du brauchst kein separates Gradle zu installieren.
+Voraussetzungen: ein aktuelles JDK (17+; getestet mit Java 21), Internetzugriff (lädt Gradle/Minecraft/Yarn/Fabric-Artefakte herunter). Der Gradle Wrapper ist bereits im Projekt enthalten, du brauchst kein separates Gradle zu installieren. JAVA_HOME muss normalerweise nicht gesetzt werden.
 
 Windows (in `fabric-coords-hud`):
 
@@ -21,9 +21,11 @@ cd fabric-coords-hud
 
 Die fertige `.jar` liegt danach in `build/libs/` und kommt in den `mods`-Ordner einer Fabric-1.16.1-Installation (Fabric Loader + Fabric API erforderlich).
 
+Das Projekt nutzt bewusst ein aktuelles Gradle (8.10.2) und aktuelles Fabric Loom (1.9.2), obwohl die Mod für die alte Minecraft-Version 1.16.1 gebaut wird — das Build-Tool läuft dadurch stabil auf modernen JDKs, während der erzeugte Mod-Bytecode per `release = 8` trotzdem auf Java 8 (Minecraft-1.16.1-kompatibel) eingestellt bleibt.
+
 ## Hinweis zu den Versionsnummern
 
-Die Versionen in `gradle.properties` (Yarn-Mappings, Fabric Loader, Fabric API) entsprechen den zur Minecraft-1.16.1-Zeit gängigen Ständen. Netzwerkzugriff auf `maven.fabricmc.net` war in dieser Umgebung nicht möglich, um sie live zu verifizieren. Falls Gradle beim Auflösen der Abhängigkeiten fehlschlägt, auf https://fabricmc.net/develop die aktuell für 1.16.1 passenden Versionen prüfen und in `gradle.properties` anpassen.
+Yarn-Mappings, Fabric Loader und Fabric API in `gradle.properties` wurden gegen die echte Verzeichnisliste auf maven.fabricmc.net geprüft und sind für Minecraft 1.16.1 bestätigt korrekt.
 
 ## Code
 
