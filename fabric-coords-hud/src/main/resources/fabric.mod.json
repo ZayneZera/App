@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "coords-display",
+  "version": "${version}",
+  "name": "Coords Display",
+  "description": "Zeigt die X/Y/Z-Koordinaten oben mittig am Bildschirm an.",
+  "authors": [
+    "Zayne"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.zayne.coordsdisplay.CoordsDisplayMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.9.0",
+    "fabric": "*",
+    "minecraft": "1.16.1"
+  }
+}
