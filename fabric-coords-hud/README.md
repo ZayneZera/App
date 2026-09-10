@@ -4,11 +4,18 @@ Zeigt permanent die X/Y/Z-Koordinaten des Spielers oben mittig am Bildschirmrand
 
 ## Bauen
 
-Voraussetzungen: JDK 8, Internetzugriff (lädt Minecraft/Yarn/Fabric-Artefakte herunter).
+Voraussetzungen: JDK 8, Internetzugriff (lädt Minecraft/Yarn/Fabric-Artefakte herunter). Der Gradle Wrapper ist bereits im Projekt enthalten, du brauchst kein separates Gradle zu installieren.
+
+Windows (in `fabric-coords-hud`):
+
+```powershell
+.\gradlew.bat build
+```
+
+macOS/Linux:
 
 ```bash
 cd fabric-coords-hud
-gradle wrapper --gradle-version 6.9   # einmalig, falls kein Wrapper vorhanden
 ./gradlew build
 ```
 
