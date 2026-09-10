@@ -5,6 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
+import net.minecraft.text.LiteralText;
 
 public class CoordsHudRenderer implements HudRenderCallback {
 
@@ -27,6 +28,6 @@ public class CoordsHudRenderer implements HudRenderCallback {
         int centerX = screenWidth / 2;
         int topY = 4;
 
-        DrawableHelper.drawCenteredText(matrixStack, client.textRenderer, text, centerX, topY, 0xFFFFFF);
+        DrawableHelper.drawCenteredText(matrixStack, client.textRenderer, new LiteralText(text), centerX, topY, 0xFFFFFF);
     }
 }
