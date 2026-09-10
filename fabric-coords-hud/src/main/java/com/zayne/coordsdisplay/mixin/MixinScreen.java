@@ -25,7 +25,7 @@ public class MixinScreen {
         }
     }
 
-    @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mouseClicked(DDI)Z", at = @At("HEAD"), cancellable = true)
     private void coordsDisplay$mouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if ((Object) this instanceof GameMenuScreen && button == 0
                 && CoordsHudRenderer.isInsideBounds((int) mouseX, (int) mouseY)) {
@@ -37,7 +37,7 @@ public class MixinScreen {
         }
     }
 
-    @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mouseDragged(DDIDD)Z", at = @At("HEAD"), cancellable = true)
     private void coordsDisplay$mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir) {
         if (coordsDisplay$dragging) {
             HudConfig config = HudConfig.get();
@@ -47,7 +47,7 @@ public class MixinScreen {
         }
     }
 
-    @Inject(method = "mouseReleased", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "mouseReleased(DDI)Z", at = @At("HEAD"), cancellable = true)
     private void coordsDisplay$mouseReleased(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
         if (coordsDisplay$dragging) {
             coordsDisplay$dragging = false;
