@@ -7,6 +7,6 @@ public class CoordsDisplayMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        HudRenderCallback.EVENT.register(new CoordsHudRenderer());
+        HudRenderCallback.EVENT.register(CoordsHudRenderer.INSTANCE);
     }
 }

@@ -1,6 +1,8 @@
 # Coords Display (Fabric Mod, Minecraft 1.16.1)
 
-Zeigt permanent die X/Y/Z-Koordinaten des Spielers oben mittig am Bildschirmrand an — kein Toggle, kein Keybind, einfach immer sichtbar (respektiert nur F1 "GUI ausblenden").
+Zeigt permanent die X/Y/Z-Koordinaten des Spielers (als ganze Zahlen) an — kein Toggle, kein Keybind, einfach immer sichtbar (respektiert nur F1 "GUI ausblenden").
+
+Position verschieben: ESC-Menü öffnen, die Koordinatenanzeige anklicken und mit gedrückter Maustaste an die gewünschte Stelle ziehen, loslassen. Die Position wird in `config/coords-display.json` gespeichert und bleibt auch nach einem Neustart erhalten.
 
 ## Bauen
 
