@@ -11,15 +11,18 @@ import java.util.function.Consumer;
 
 /**
  * Small square toggle: the box itself never changes fill/border, only whether the checkmark
- * icon is drawn over it (slightly overflowing the box edges).
+ * icon is drawn over it. BOX_SIZE is drawn 1:1 against checkmark.png's own pixel size (no
+ * scaling at all) - checkmark.png MUST be exactly BOX_SIZE x BOX_SIZE pixels, or the texture
+ * gets resampled again and looks mangled the same way it did before.
  */
 public class DarkCheckbox extends ButtonWidget {
     private static final Identifier CHECKMARK = new Identifier("seedfilter", "textures/gui/checkmark.png");
+    public static final int BOX_SIZE = 12;
 
     private boolean checked;
 
-    public DarkCheckbox(int x, int y, int size, boolean initial, int unusedAccent, Consumer<Boolean> onToggle) {
-        super(x, y, size, size, LiteralText.EMPTY, btn -> {
+    public DarkCheckbox(int x, int y, boolean initial, Consumer<Boolean> onToggle) {
+        super(x, y, BOX_SIZE, BOX_SIZE, LiteralText.EMPTY, btn -> {
             DarkCheckbox self = (DarkCheckbox) btn;
             self.checked = !self.checked;
             onToggle.accept(self.checked);
@@ -36,17 +39,11 @@ public class DarkCheckbox extends ButtonWidget {
         fill(matrices, this.x, this.y, this.x + this.width, this.y + this.height, DarkTheme.WIDGET_BORDER);
         fill(matrices, this.x + 1, this.y + 1, this.x + this.width - 1, this.y + this.height - 1, DarkTheme.WIDGET_BG);
         if (checked) {
-            // checkmark.png isn't perfectly centered within its own 24x24 canvas (more
-            // padding top/right than bottom/left), so nudge the draw position to compensate.
-            int size = this.height;
-            int dx = this.x + this.width / 2 - size / 2 + 1;
-            int dy = this.y + this.height / 2 - size / 2 - 1;
-
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
             RenderSystem.color4f(1f, 1f, 1f, 1f);
             MinecraftClient.getInstance().getTextureManager().bindTexture(CHECKMARK);
-            drawTexture(matrices, dx, dy, size, size, 0f, 0f, 24, 24, 24, 24);
+            drawTexture(matrices, this.x, this.y, BOX_SIZE, BOX_SIZE, 0f, 0f, BOX_SIZE, BOX_SIZE, BOX_SIZE, BOX_SIZE);
         }
     }
 }

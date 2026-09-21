@@ -95,9 +95,9 @@ public class SeedFilterMenuScreen extends Screen {
     }
 
     private void addCheckboxRow(int x, String label, boolean initial, Consumer<Boolean> setter) {
-        this.addButton(new DarkCheckbox(x + 4, nextY, 10, initial, DarkTheme.ACCENT, setter));
-        checkboxLabels.add(new Object[]{label, x + 20, nextY + 1});
-        nextY += 15;
+        this.addButton(new DarkCheckbox(x + 4, nextY, initial, setter));
+        checkboxLabels.add(new Object[]{label, x + 22, nextY + 2});
+        nextY += 16;
     }
 
     private void addSliderRow(int x, int w, String label, int min, int max, int value, IntConsumer setter) {

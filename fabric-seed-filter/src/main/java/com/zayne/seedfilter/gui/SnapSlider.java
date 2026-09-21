@@ -80,29 +80,51 @@ public class SnapSlider extends SliderWidget {
 
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        // Track background. Border must be inset on ALL sides (including left/right) or the
-        // ends look open/cut off.
-        fill(matrices, this.x, this.y + this.height / 2 - 2, this.x + this.width, this.y + this.height / 2 + 2, DarkTheme.WIDGET_BORDER);
-        fill(matrices, this.x + 1, this.y + this.height / 2 - 1, this.x + this.width - 1, this.y + this.height / 2 + 1, DarkTheme.WIDGET_BG);
+        int trackX = this.x;
+        int trackY = this.y + this.height / 2 - 3;
+        int trackW = this.width;
+        int trackH = 6;
 
-        // Tick marks at every snap step (only drawn if they wouldn't be pixel-mush - cap density).
+        // Track: border + bg, then both corners on BOTH ends cut back to the panel color by the
+        // same amount, so left and right read as identically rounded instead of one side looking
+        // rounded and the other square.
+        fill(matrices, trackX, trackY, trackX + trackW, trackY + trackH, DarkTheme.WIDGET_BORDER);
+        fill(matrices, trackX + 1, trackY + 1, trackX + trackW - 1, trackY + trackH - 1, DarkTheme.WIDGET_BG);
+        cutCorner(matrices, trackX, trackY);
+        cutCorner(matrices, trackX + trackW - 1, trackY);
+        cutCorner(matrices, trackX, trackY + trackH - 1);
+        cutCorner(matrices, trackX + trackW - 1, trackY + trackH - 1);
+
+        // XP-bar style progress fill from the track's left edge up to the handle.
+        int usableWidth = this.width - HANDLE_WIDTH;
+        int handleX = this.x + (int) Math.round(usableWidth * this.value);
+        int fillEnd = Math.min(trackX + trackW - 1, handleX + HANDLE_WIDTH / 2);
+        if (fillEnd > trackX + 1) {
+            fill(matrices, trackX + 1, trackY + 1, fillEnd, trackY + trackH - 1, DarkTheme.PROGRESS_FILL);
+        }
+
+        // Tick marks at every snap step, clamped strictly inside the border (the last tick used
+        // to land one pixel outside it on the right, which is what made the two ends look
+        // asymmetric even though the border itself was symmetric).
         int steps = max - min;
         if (steps > 0 && steps <= 32) {
             for (int i = 0; i <= steps; i++) {
-                int tx = this.x + (int) (this.width * (i / (double) steps));
-                fill(matrices, tx, this.y + this.height / 2 - 1, tx + 1, this.y + this.height / 2 + 1, 0xA0888888);
+                int tx = trackX + 1 + (int) Math.round((trackW - 3) * (i / (double) steps));
+                fill(matrices, tx, trackY + 1, tx + 1, trackY + trackH - 1, 0x50000000);
             }
         }
 
         // Handle: ranges across the full track width, so at value=0/1 it's flush with the
         // track's own left/right edges instead of stopping short.
-        int usableWidth = this.width - HANDLE_WIDTH;
-        int handleX = this.x + (int) Math.round(usableWidth * this.value);
-        fill(matrices, handleX, this.y + 2, handleX + HANDLE_WIDTH, this.y + this.height - 2, DarkTheme.WIDGET_BORDER);
-        fill(matrices, handleX + 1, this.y + 3, handleX + HANDLE_WIDTH - 1, this.y + this.height - 3, accentColor);
+        fill(matrices, handleX, this.y, handleX + HANDLE_WIDTH, this.y + this.height, DarkTheme.WIDGET_BORDER);
+        fill(matrices, handleX + 1, this.y + 1, handleX + HANDLE_WIDTH - 1, this.y + this.height - 1, accentColor);
 
         RenderSystem.enableBlend();
         drawCenteredText(matrices, net.minecraft.client.MinecraftClient.getInstance().textRenderer,
                 this.getMessage(), this.x + this.width / 2, this.y + this.height + 1, DarkTheme.TEXT_DIM);
+    }
+
+    private static void cutCorner(MatrixStack matrices, int px, int py) {
+        fill(matrices, px, py, px + 1, py + 1, DarkTheme.PANEL);
     }
 }

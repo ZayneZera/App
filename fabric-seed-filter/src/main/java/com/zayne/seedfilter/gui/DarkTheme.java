@@ -15,6 +15,7 @@ public class DarkTheme {
     public static final int TEXT_DIM = 0xFF9C9C9C;
     public static final int ACCENT = 0xFF5AD65A;
     public static final int HEADING = 0xFF5AD65A;
+    public static final int PROGRESS_FILL = 0xFF2E7D2E;
 
     private DarkTheme() {
     }
