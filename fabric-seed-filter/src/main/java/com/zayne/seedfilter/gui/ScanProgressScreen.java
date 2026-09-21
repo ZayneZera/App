@@ -17,6 +17,7 @@ public class ScanProgressScreen extends Screen {
     private final AtomicReference<Process> processHolder;
     private final EngineStats stats;
     private final SeedFilterConfig config;
+    private double maxPctSeen = 0.0;
 
     public ScanProgressScreen(Screen parent, AtomicReference<Process> processHolder, EngineStats stats) {
         super(new LiteralText("Suche passende Seed..."));
@@ -50,12 +51,19 @@ public class ScanProgressScreen extends Screen {
      * Bar filled by attempts-so-far / statistically-expected-attempts (from ProbabilityEstimator),
      * capped at 100% - the estimate ignores things like biome requirements, so it can fill up
      * well before an actual match; once full it just stays full while the search keeps going.
+     *
+     * expectedAttempts is recomputed live and can jump UP once a criterion crosses the sample
+     * threshold and switches from the static guess to its real (often much rarer) empirical pass
+     * rate - that alone would make an already-100% bar drop back down mid-search. maxPctSeen
+     * latches the highest value shown so far so the bar only ever climbs, never regresses.
      */
     private void renderProgressBar(MatrixStack matrices, int y) {
         int barW = 300, barH = 10;
         int x = this.width / 2 - barW / 2;
         double expectedAttempts = ProbabilityEstimator.expectedAttempts(config, stats);
-        double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
+        double rawPct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
+        maxPctSeen = Math.max(maxPctSeen, rawPct);
+        double pct = maxPctSeen;
         // Inner fillable area is only barW - 2 wide (1px border on each side), so the fill must
         // be capped to that, not to barW itself - at 100% "filled = barW" pushed 1px past the
         // right border.
