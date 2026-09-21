@@ -59,7 +59,7 @@ public class SeedScanner {
 
     private static boolean matches(long seed, FilterConfig config) {
         VanillaLayeredBiomeSource overworldBiomes = HeadlessBiomeSource.create(seed);
-        int[] spawn = SpawnFinder.findApproxOverworldSpawn(overworldBiomes);
+        int[] spawn = SpawnFinder.findRealOverworldSpawn(seed, overworldBiomes);
         int spawnChunkX = spawn[0] >> 4;
         int spawnChunkZ = spawn[1] >> 4;
 
