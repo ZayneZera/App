@@ -132,13 +132,19 @@ public class SeedFilterMenuScreen extends Screen {
     }
 
     private static void fillRounded(MatrixStack matrices, int x, int y, int w, int h, int fillColor, int borderColor) {
-        // Corner notches approximating rounding within this version's plain-rect renderer.
-        fill(matrices, x + 3, y, x + w - 3, y + h, borderColor);
-        fill(matrices, x, y + 3, x + w, y + h - 3, borderColor);
-        fill(matrices, x + 1, y + 1, x + w - 1, y + 2, borderColor);
-        fill(matrices, x + 1, y + h - 2, x + w - 1, y + h - 1, borderColor);
-        fill(matrices, x + 4, y + 1, x + w - 4, y + h - 1, fillColor);
-        fill(matrices, x + 1, y + 4, x + w - 1, y + h - 4, fillColor);
+        // Solid border rect first so there are no undrawn/transparent pixels anywhere in the
+        // panel bounds (the previous "notch" approach left the true corner pixels completely
+        // unpainted, so the brown Minecraft background showed through there instead of looking
+        // rounded - it looked like broken corner brackets).
+        fill(matrices, x, y, x + w, y + h, borderColor);
+        fill(matrices, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+
+        // Small corner squares painted back to the border color to fake rounding.
+        int r = 3;
+        fill(matrices, x + 1, y + 1, x + 1 + r, y + 1 + r, borderColor);
+        fill(matrices, x + w - 1 - r, y + 1, x + w - 1, y + 1 + r, borderColor);
+        fill(matrices, x + 1, y + h - 1 - r, x + 1 + r, y + h - 1, borderColor);
+        fill(matrices, x + w - 1 - r, y + h - 1 - r, x + w - 1, y + h - 1, borderColor);
     }
 
     @Override
