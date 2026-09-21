@@ -73,12 +73,20 @@ public class ProbabilityEstimator {
         return p;
     }
 
-    /** Empirical pass rate once there's enough data, otherwise the static formula's guess. */
+    /**
+     * Blends linearly from the static guess to the empirical rate as samples accumulate, instead
+     * of switching over in one step at reached == MIN_SAMPLES. A hard switch meant every enabled
+     * criterion's own transition (each lands at a different attempt count) yanked the combined
+     * probability - and therefore expectedAttempts - by a large amount in a single frame, which
+     * showed up as the progress bar's growth suddenly stalling right at that point.
+     */
     private static double rate(long reached, long passed, double staticFallback) {
-        if (reached < MIN_SAMPLES) {
+        if (reached == 0) {
             return staticFallback;
         }
-        return (double) passed / reached;
+        double empirical = (double) passed / reached;
+        double weight = Math.min(1.0, reached / (double) MIN_SAMPLES);
+        return staticFallback * (1 - weight) + empirical * weight;
     }
 
     private static double areaProbability(int maxChunks, double spacing) {

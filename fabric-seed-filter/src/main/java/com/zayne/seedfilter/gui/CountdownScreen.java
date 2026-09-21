@@ -36,7 +36,6 @@ public class CountdownScreen extends Screen {
     private boolean triggered = false;
     private double maxPctSeen = 0.0;
     private final SmoothedValue smoothedPct = new SmoothedValue();
-    private final EmaSmoother smoothedExpectedAttempts = new EmaSmoother(2.5);
 
     public CountdownScreen() {
         super(new LiteralText("Nächster Seed"));
@@ -47,11 +46,22 @@ public class CountdownScreen extends Screen {
     @Override
     protected void init() {
         this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 110, 150, 20,
-                new LiteralText("Abbrechen"), button -> {
+                new LiteralText("Abbrechen"), button -> this.onClose()));
+    }
+
+    /**
+     * Called for BOTH the Abbrechen button and an Escape keypress (shouldCloseOnEsc() is true
+     * here) - without this override, Escape closed the screen without ever calling
+     * ExternalEngine.cancel(), leaving seedfilter.exe (and its worker threads) running full-tilt
+     * in the background indefinitely with no UI left pointing at it.
+     */
+    @Override
+    public void onClose() {
+        if (!triggered) {
             cancelled.set(true);
             ExternalEngine.cancel(processHolder);
-            this.client.openScreen(null);
-        }));
+        }
+        this.client.openScreen(null);
     }
 
     @Override
@@ -146,8 +156,7 @@ public class CountdownScreen extends Screen {
     private void renderProgressBar(MatrixStack matrices, int y) {
         int barW = 260, barH = 10;
         int x = this.width / 2 - barW / 2;
-        double liveExpectedAttempts = ProbabilityEstimator.expectedAttemptsForDisplay(config, stats);
-        double expectedAttempts = smoothedExpectedAttempts.update(liveExpectedAttempts);
+        double expectedAttempts = ProbabilityEstimator.expectedAttemptsForDisplay(config, stats);
         double rawPct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         maxPctSeen = Math.max(maxPctSeen, rawPct);
         double pct = smoothedPct.update(maxPctSeen);

@@ -82,6 +82,12 @@ public class ExternalEngine {
                         .redirectErrorStream(true)
                         .start();
                 processHolder.set(process);
+                // Belt and suspenders against orphaning the exe (and its worker threads still
+                // spinning at full CPU) if the game closes entirely while a search is running -
+                // any path that skips ExternalEngine.cancel() would otherwise leave it running
+                // forever with no UI left pointing at it.
+                Thread killOnJvmExit = new Thread(process::destroy);
+                Runtime.getRuntime().addShutdownHook(killOnJvmExit);
 
                 Long seed = null;
                 Integer spawnX = null, spawnZ = null;
@@ -109,6 +115,11 @@ public class ExternalEngine {
                 }
 
                 process.waitFor();
+                try {
+                    Runtime.getRuntime().removeShutdownHook(killOnJvmExit);
+                } catch (IllegalStateException ignored) {
+                    // JVM is already shutting down - the hook will run (or has run) regardless.
+                }
 
                 if (seed != null && spawnX != null && spawnZ != null) {
                     future.complete(new Result(seed, spawnX, spawnZ, cheats, creative));
