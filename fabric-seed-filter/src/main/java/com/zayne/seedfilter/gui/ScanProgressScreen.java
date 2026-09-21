@@ -17,7 +17,6 @@ public class ScanProgressScreen extends Screen {
     private final AtomicReference<Process> processHolder;
     private final EngineStats stats;
     private final SeedFilterConfig config;
-    private final double expectedAttempts;
 
     public ScanProgressScreen(Screen parent, AtomicReference<Process> processHolder, EngineStats stats) {
         super(new LiteralText("Suche passende Seed..."));
@@ -25,7 +24,6 @@ public class ScanProgressScreen extends Screen {
         this.processHolder = processHolder;
         this.stats = stats;
         this.config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
-        this.expectedAttempts = ProbabilityEstimator.expectedAttempts(config);
     }
 
     @Override
@@ -56,6 +54,7 @@ public class ScanProgressScreen extends Screen {
     private void renderProgressBar(MatrixStack matrices, int y) {
         int barW = 300, barH = 10;
         int x = this.width / 2 - barW / 2;
+        double expectedAttempts = ProbabilityEstimator.expectedAttempts(config, stats);
         double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         int filled = (int) (barW * pct / 100.0);
 

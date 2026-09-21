@@ -32,7 +32,6 @@ public class CountdownScreen extends Screen {
     private final AtomicReference<Process> processHolder = new AtomicReference<>();
     private final EngineStats stats = new EngineStats();
     private final SeedFilterConfig config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
-    private final double expectedAttempts = ProbabilityEstimator.expectedAttempts(config);
     private final CompletableFuture<ExternalEngine.Result> scanFuture;
     private boolean triggered = false;
 
@@ -144,6 +143,7 @@ public class CountdownScreen extends Screen {
     private void renderProgressBar(MatrixStack matrices, int y) {
         int barW = 260, barH = 10;
         int x = this.width / 2 - barW / 2;
+        double expectedAttempts = ProbabilityEstimator.expectedAttempts(config, stats);
         double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         int filled = (int) (barW * pct / 100.0);
 
