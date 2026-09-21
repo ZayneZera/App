@@ -10,11 +10,11 @@ package com.zayne.seedfilter;
  * way to know about, so on its own it was wildly optimistic (~39% predicted at a 4-chunk radius
  * vs. ~1.2% actually observed this session - the progress bar hit 100% almost immediately).
  *
- * Fix: once a criterion has enough live samples (EngineStats' reached/passed counts, streamed
- * from the exe's real cubiomes-backed checks), use ITS OWN measured pass rate instead of the
- * static guess - that's ground truth, not an approximation, and automatically accounts for
- * biome effects the static formula can't model. Only criteria still short on samples fall back
- * to the static estimate.
+ * Fix: as live samples come in (EngineStats' reached/passed counts, streamed from the exe's real
+ * cubiomes-backed checks), blend towards the criterion's OWN measured pass rate instead of the
+ * static guess - that's ground truth, not an approximation, and automatically accounts for biome
+ * effects the static formula can't model. See rate() for why this is a gradual Bayesian blend
+ * rather than a hard switch once enough samples exist.
  */
 public class ProbabilityEstimator {
 
@@ -24,8 +24,11 @@ public class ProbabilityEstimator {
     private static final double BASTION_WIN_FRACTION = 0.6;
     private static final double FORTRESS_WIN_FRACTION = 0.4;
 
-    /** Below this many "reached" samples, a criterion's empirical rate is too noisy to trust. */
-    private static final long MIN_SAMPLES = 25;
+    /**
+     * How many "virtual" trials the static guess is worth when blending with the live empirical
+     * rate (see rate() below) - not a hard sample-count threshold.
+     */
+    private static final double PRIOR_WEIGHT = 25;
 
     /**
      * The estimate is a 50% expectation (on average, half of matching seeds get found before
@@ -74,19 +77,21 @@ public class ProbabilityEstimator {
     }
 
     /**
-     * Blends linearly from the static guess to the empirical rate as samples accumulate, instead
-     * of switching over in one step at reached == MIN_SAMPLES. A hard switch meant every enabled
-     * criterion's own transition (each lands at a different attempt count) yanked the combined
-     * probability - and therefore expectedAttempts - by a large amount in a single frame, which
-     * showed up as the progress bar's growth suddenly stalling right at that point.
+     * Bayesian blend: treats the static guess as if it were already backed by PRIOR_WEIGHT
+     * virtual trials, then folds in the real observed (passed, reached) on top of that.
+     * Equivalent to a Beta-prior update, and it never collapses to a hard 0 - which matters a lot
+     * for a genuinely rare criterion like Fortress. A previous version switched fully over to the
+     * raw empirical rate (passed/reached) once reached crossed a threshold - but a rare structure
+     * routinely sits at e.g. 0/47 for a long stretch simply because it hasn't gotten lucky yet,
+     * NOT because its true rate is 0. Trusting that raw 0 collapsed the combined probability to
+     * 0, sent expectedAttempts to its ceiling, and froze the whole bar's growth well before an
+     * actual match - even though the other (non-zero) criteria were still progressing fine. Here,
+     * a 0/47 criterion still contributes a small but nonzero rate that only fades toward true 0
+     * gradually as more zero-hit samples pile up, so the bar keeps crawling forward instead of
+     * stalling on one unlucky criterion.
      */
     private static double rate(long reached, long passed, double staticFallback) {
-        if (reached == 0) {
-            return staticFallback;
-        }
-        double empirical = (double) passed / reached;
-        double weight = Math.min(1.0, reached / (double) MIN_SAMPLES);
-        return staticFallback * (1 - weight) + empirical * weight;
+        return (passed + staticFallback * PRIOR_WEIGHT) / (reached + PRIOR_WEIGHT);
     }
 
     private static double areaProbability(int maxChunks, double spacing) {
