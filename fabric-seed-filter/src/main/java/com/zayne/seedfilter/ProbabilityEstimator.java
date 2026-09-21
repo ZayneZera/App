@@ -27,9 +27,23 @@ public class ProbabilityEstimator {
     /** Below this many "reached" samples, a criterion's empirical rate is too noisy to trust. */
     private static final long MIN_SAMPLES = 25;
 
+    /**
+     * The estimate is a 50% expectation (on average, half of matching seeds get found before
+     * this many attempts and half after) - displaying it directly means the progress bar hits
+     * 100% at "average" luck and reads as stuck/broken on the unlucky-but-still-normal runs that
+     * take longer. Padding the denominator by 50% makes the bar hit 100% only once 150% of the
+     * expected attempts have run, so an average-length search shows ~67% instead of 100%.
+     */
+    private static final double DISPLAY_SAFETY_MARGIN = 1.5;
+
     public static double expectedAttempts(SeedFilterConfig cfg, EngineStats stats) {
         double p = combinedProbability(cfg, stats);
         return 1.0 / Math.max(p, 1e-12);
+    }
+
+    /** Same as {@link #expectedAttempts}, but padded for progress-bar display - see DISPLAY_SAFETY_MARGIN. */
+    public static double expectedAttemptsForDisplay(SeedFilterConfig cfg, EngineStats stats) {
+        return expectedAttempts(cfg, stats) * DISPLAY_SAFETY_MARGIN;
     }
 
     private static double combinedProbability(SeedFilterConfig cfg, EngineStats stats) {
