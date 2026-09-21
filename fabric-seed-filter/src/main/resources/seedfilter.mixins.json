@@ -6,7 +6,6 @@
   "client": [
     "AbstractButtonWidgetAccessor",
     "CreateWorldScreenAccessor",
-    "CreateWorldScreenModeAccessor",
     "MixinGameMenuScreen",
     "MixinTitleScreen",
     "MoreOptionsDialogAccessor"

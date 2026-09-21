@@ -3,7 +3,6 @@ package com.zayne.seedfilter;
 import com.zayne.seedfilter.gui.EngineMissingScreen;
 import com.zayne.seedfilter.gui.ScanProgressScreen;
 import com.zayne.seedfilter.mixin.CreateWorldScreenAccessor;
-import com.zayne.seedfilter.mixin.CreateWorldScreenModeAccessor;
 import com.zayne.seedfilter.mixin.MoreOptionsDialogAccessor;
 import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
@@ -16,6 +15,7 @@ import net.minecraft.world.GameMode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -73,19 +73,32 @@ public class SeedFilterMod implements ClientModInitializer {
 
     /**
      * Sets CreateWorldScreen's "currentMode" (the Survival/Creative/Hardcore selector, read at
-     * createLevel() time to pick the actual world game mode) to Creative. Yarn doesn't give the
-     * Mode enum's own constants names, so instead of guessing one, this scans Mode.values() for
-     * whichever one's defaultGameMode is GameMode.CREATIVE.
+     * createLevel() time to pick the actual world game mode) to Creative.
+     *
+     * currentMode's real type is CreateWorldScreen's own package-private "Mode" enum, which our
+     * mod's package can't reference as a Java type at all (confirmed by a real compile error:
+     * "Mode is not public in CreateWorldScreen"). Reflection sidesteps that entirely - once we
+     * have a live Mode instance (via the Object-typed accessor), getClass() gives us its real
+     * runtime Class regardless of source-level visibility, and getEnumConstants()/setAccessible
+     * work on it the same way they would for any enum.
      */
     private static void applyCreativeDefault(CreateWorldScreenAccessor accessor) {
-        for (CreateWorldScreen.Mode mode : CreateWorldScreen.Mode.values()) {
-            GameMode gameMode = ((CreateWorldScreenModeAccessor) (Object) mode).getDefaultGameMode();
-            if (gameMode == GameMode.CREATIVE) {
-                accessor.setCurrentMode(mode);
-                return;
+        try {
+            Object currentMode = accessor.getCurrentMode();
+            Class<?> modeClass = currentMode.getClass();
+            Field defaultGameModeField = modeClass.getDeclaredField("defaultGameMode");
+            defaultGameModeField.setAccessible(true);
+
+            for (Object mode : modeClass.getEnumConstants()) {
+                if (defaultGameModeField.get(mode) == GameMode.CREATIVE) {
+                    accessor.setCurrentMode(mode);
+                    return;
+                }
             }
+            LOGGER.warn("Could not find a Creative CreateWorldScreen.Mode entry");
+        } catch (ReflectiveOperationException e) {
+            LOGGER.warn("Failed to set Creative game mode default", e);
         }
-        LOGGER.warn("Could not find a Creative CreateWorldScreen.Mode entry");
     }
 
     /**
