@@ -2,6 +2,7 @@ package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.EngineStats;
 import com.zayne.seedfilter.ExternalEngine;
+import com.zayne.seedfilter.ProbabilityEstimator;
 import com.zayne.seedfilter.SeedFilterConfig;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
@@ -16,6 +17,7 @@ public class ScanProgressScreen extends Screen {
     private final AtomicReference<Process> processHolder;
     private final EngineStats stats;
     private final SeedFilterConfig config;
+    private final double expectedAttempts;
 
     public ScanProgressScreen(Screen parent, AtomicReference<Process> processHolder, EngineStats stats) {
         super(new LiteralText("Suche passende Seed..."));
@@ -23,11 +25,12 @@ public class ScanProgressScreen extends Screen {
         this.processHolder = processHolder;
         this.stats = stats;
         this.config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
+        this.expectedAttempts = ProbabilityEstimator.expectedAttempts(config);
     }
 
     @Override
     protected void init() {
-        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 90, 150, 20,
+        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 110, 150, 20,
                 new LiteralText("Abbrechen"), button -> {
             ExternalEngine.cancel(processHolder);
             this.client.openScreen(this.parent);
@@ -41,7 +44,27 @@ public class ScanProgressScreen extends Screen {
         drawCenteredText(matrices, this.textRenderer, new LiteralText("Versuche: " + stats.attempts.get()),
                 this.width / 2, this.height / 2 - 10, 0xAAAAAA);
         renderFunnel(matrices);
+        renderProgressBar(matrices, this.height / 2 + 70);
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    /**
+     * Bar filled by attempts-so-far / statistically-expected-attempts (from ProbabilityEstimator),
+     * capped at 100% - the estimate ignores things like biome requirements, so it can fill up
+     * well before an actual match; once full it just stays full while the search keeps going.
+     */
+    private void renderProgressBar(MatrixStack matrices, int y) {
+        int barW = 300, barH = 10;
+        int x = this.width / 2 - barW / 2;
+        double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
+        int filled = (int) (barW * pct / 100.0);
+
+        fill(matrices, x, y, x + barW, y + barH, 0xFF000000);
+        fill(matrices, x + 1, y + 1, x + barW - 1, y + barH - 1, 0xFF2B2B2B);
+        fill(matrices, x + 1, y + 1, x + 1 + filled, y + barH - 1, DarkTheme.ACCENT);
+
+        drawCenteredText(matrices, this.textRenderer, new LiteralText(String.format("%.0f%%", pct)),
+                this.width / 2, y + barH + 3, DarkTheme.TEXT_DIM);
     }
 
     /** Live "passed/reached" funnel per enabled criterion, read from the exe's Progress: lines. */

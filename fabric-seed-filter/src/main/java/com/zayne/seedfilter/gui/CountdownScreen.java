@@ -2,6 +2,7 @@ package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.EngineStats;
 import com.zayne.seedfilter.ExternalEngine;
+import com.zayne.seedfilter.ProbabilityEstimator;
 import com.zayne.seedfilter.SeedFilterConfig;
 import com.zayne.seedfilter.SeedFilterMod;
 import net.minecraft.client.MinecraftClient;
@@ -17,9 +18,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Shown when "Nächster Seed" is clicked in the pause menu. Starts the external engine
- * IMMEDIATELY (while still in the current world) and shows a 3-second countdown with a Cancel
- * button. If not cancelled, once the countdown ends it disconnects to the title screen, waits
- * briefly, then auto-creates/joins the (by then likely already found) seed.
+ * IMMEDIATELY (while still in the current world) and counts down 3 seconds. Once the countdown
+ * reaches 0 it does NOT disconnect right away - it keeps waiting (still showing 0, still
+ * searching) until the engine actually reports a match, and only then disconnects to the title
+ * screen and auto-creates/joins the found seed.
  */
 public class CountdownScreen extends Screen {
 
@@ -30,6 +32,7 @@ public class CountdownScreen extends Screen {
     private final AtomicReference<Process> processHolder = new AtomicReference<>();
     private final EngineStats stats = new EngineStats();
     private final SeedFilterConfig config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
+    private final double expectedAttempts = ProbabilityEstimator.expectedAttempts(config);
     private final CompletableFuture<ExternalEngine.Result> scanFuture;
     private boolean triggered = false;
 
@@ -41,7 +44,7 @@ public class CountdownScreen extends Screen {
 
     @Override
     protected void init() {
-        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 90, 150, 20,
+        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 110, 150, 20,
                 new LiteralText("Abbrechen"), button -> {
             cancelled.set(true);
             ExternalEngine.cancel(processHolder);
@@ -56,7 +59,10 @@ public class CountdownScreen extends Screen {
             return;
         }
         long elapsedMillis = System.currentTimeMillis() - startTimeMillis;
-        if (elapsedMillis >= COUNTDOWN_SECONDS * 1000L) {
+        boolean countdownElapsed = elapsedMillis >= COUNTDOWN_SECONDS * 1000L;
+        // Wait for BOTH the countdown AND an actual match - never disconnect just because the
+        // timer ran out while the search is still going.
+        if (countdownElapsed && scanFuture.isDone()) {
             triggered = true;
             MinecraftClient client = MinecraftClient.getInstance();
             // Two-step vanilla-style disconnect: tell the world/server first, then tear
@@ -87,7 +93,7 @@ public class CountdownScreen extends Screen {
         this.renderBackground(matrices);
 
         long elapsedMillis = System.currentTimeMillis() - startTimeMillis;
-        int remaining = Math.max(1, COUNTDOWN_SECONDS - (int) (elapsedMillis / 1000));
+        int remaining = Math.max(0, COUNTDOWN_SECONDS - (int) (elapsedMillis / 1000));
 
         matrices.push();
         matrices.translate(this.width / 2.0, this.height / 2.0 - 40, 0);
@@ -95,9 +101,11 @@ public class CountdownScreen extends Screen {
         drawCenteredText(matrices, this.textRenderer, new LiteralText(String.valueOf(remaining)), 0, 0, 0xFFFFFF);
         matrices.pop();
 
-        drawCenteredText(matrices, this.textRenderer, new LiteralText("Versuche: " + stats.attempts.get()),
+        String status = remaining > 0 ? "Suche Seed im Hintergrund..." : "Warte auf Fund...";
+        drawCenteredText(matrices, this.textRenderer, new LiteralText(status),
                 this.width / 2, this.height / 2 + 10, 0xAAAAAA);
         renderFunnel(matrices);
+        renderProgressBar(matrices, this.height / 2 + 70);
 
         super.render(matrices, mouseX, mouseY, delta);
     }
@@ -126,6 +134,25 @@ public class CountdownScreen extends Screen {
         drawCenteredText(matrices, this.textRenderer,
                 new LiteralText(label + ": " + passed + "/" + reached + pct), this.width / 2, y, 0x77AAFF);
         return y + 10;
+    }
+
+    /**
+     * Bar filled by attempts-so-far / statistically-expected-attempts, capped at 100% - the
+     * estimate ignores things like biome requirements, so it can fill up well before an actual
+     * match; once full it just stays full while the search keeps going.
+     */
+    private void renderProgressBar(MatrixStack matrices, int y) {
+        int barW = 260, barH = 10;
+        int x = this.width / 2 - barW / 2;
+        double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
+        int filled = (int) (barW * pct / 100.0);
+
+        fill(matrices, x, y, x + barW, y + barH, 0xFF000000);
+        fill(matrices, x + 1, y + 1, x + barW - 1, y + barH - 1, 0xFF2B2B2B);
+        fill(matrices, x + 1, y + 1, x + 1 + filled, y + barH - 1, DarkTheme.ACCENT);
+
+        drawCenteredText(matrices, this.textRenderer, new LiteralText(String.format("%.0f%%", pct)),
+                this.width / 2, y + barH + 3, DarkTheme.TEXT_DIM);
     }
 
     @Override
