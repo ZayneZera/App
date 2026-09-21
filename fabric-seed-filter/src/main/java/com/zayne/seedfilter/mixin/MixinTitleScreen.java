@@ -25,7 +25,7 @@ public abstract class MixinTitleScreen extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void seedFilter$init(CallbackInfo ci) {
-        int size = 32;
+        int size = 20; // same height as vanilla's 20px-tall menu buttons, so a 24px row gap doesn't overlap
         int margin = 10;
         int x = this.width - size - margin;
 
