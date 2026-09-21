@@ -77,7 +77,7 @@ public class CountdownScreen extends Screen {
             client.execute(() -> waitThenCreate(client, settleTicks - 1));
         } else {
             scanFuture.thenAccept(result -> client.execute(() ->
-                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result.seed)));
+                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result.seed, result.spawnX, result.spawnZ)));
         }
     }
 

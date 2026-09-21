@@ -23,9 +23,13 @@ public class SeedScanner {
 
     public static class Result {
         public final long seed;
+        public final int spawnX;
+        public final int spawnZ;
 
-        public Result(long seed) {
+        public Result(long seed, int spawnX, int spawnZ) {
             this.seed = seed;
+            this.spawnX = spawnX;
+            this.spawnZ = spawnZ;
         }
     }
 
@@ -45,8 +49,9 @@ public class SeedScanner {
                 while (!cancelled.get() && !future.isDone()) {
                     long seed = rnd.nextLong();
                     attemptsCounter.incrementAndGet();
-                    if (matches(seed, config)) {
-                        future.complete(new Result(seed));
+                    int[] spawn = matches(seed, config);
+                    if (spawn != null) {
+                        future.complete(new Result(seed, spawn[0], spawn[1]));
                         return;
                     }
                 }
@@ -57,7 +62,10 @@ public class SeedScanner {
         return future;
     }
 
-    private static boolean matches(long seed, FilterConfig config) {
+    /**
+     * Returns the computed [spawnX, spawnZ] on a match, or null if the seed doesn't qualify.
+     */
+    private static int[] matches(long seed, FilterConfig config) {
         VanillaLayeredBiomeSource overworldBiomes = HeadlessBiomeSource.create(seed);
         int[] spawn = SpawnFinder.findRealOverworldSpawn(seed, overworldBiomes);
         int spawnChunkX = spawn[0] >> 4;
@@ -65,16 +73,16 @@ public class SeedScanner {
 
         if (config.villageEnabled && !checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
                 StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
-            return false;
+            return null;
         }
 
         if (config.ruinedPortalEnabled && !checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
                 StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
-            return false;
+            return null;
         }
 
         if (config.buriedTreasureEnabled && !checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
-            return false;
+            return null;
         }
 
         if (config.bastionEnabled || config.fortressEnabled) {
@@ -85,16 +93,16 @@ public class SeedScanner {
 
             if (config.bastionEnabled && !checkNetherGridStructure(seed, netherBiomes, StructureConfig.BASTION,
                     StructureFeatures.BASTION_REMNANT, netherChunkX, netherChunkZ, config.bastionMaxNetherChunks)) {
-                return false;
+                return null;
             }
 
             if (config.fortressEnabled && !checkNetherGridStructure(seed, netherBiomes, StructureConfig.FORTRESS,
                     StructureFeatures.FORTRESS, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
-                return false;
+                return null;
             }
         }
 
-        return true;
+        return spawn;
     }
 
     private static boolean checkOverworldGridStructure(long seed, VanillaLayeredBiomeSource biomes, StructureConfig placement,
