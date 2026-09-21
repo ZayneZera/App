@@ -26,6 +26,7 @@ void config_set_defaults(FilterConfig *cfg) {
     cfg->fortressMaxNetherChunks = 12;
 
     cfg->enableCheats = 0;
+    cfg->creativeMode = 0;
 
     cfg->threadCount = 6;
 }
@@ -68,6 +69,7 @@ int config_load(FilterConfig *cfg, const char *path) {
         else if (strcmp(key, "fortress_enabled") == 0) cfg->fortressEnabled = value;
         else if (strcmp(key, "fortress_max_nether_chunks") == 0) cfg->fortressMaxNetherChunks = value;
         else if (strcmp(key, "enable_cheats") == 0) cfg->enableCheats = value;
+        else if (strcmp(key, "creative_mode") == 0) cfg->creativeMode = value;
         else if (strcmp(key, "thread_count") == 0) cfg->threadCount = value;
     }
 
@@ -95,6 +97,7 @@ int config_save(const FilterConfig *cfg, const char *path) {
     fprintf(f, "fortress_enabled=%d\n", cfg->fortressEnabled);
     fprintf(f, "fortress_max_nether_chunks=%d\n", cfg->fortressMaxNetherChunks);
     fprintf(f, "enable_cheats=%d\n", cfg->enableCheats);
+    fprintf(f, "creative_mode=%d\n", cfg->creativeMode);
     fprintf(f, "thread_count=%d\n", cfg->threadCount);
 
     fclose(f);

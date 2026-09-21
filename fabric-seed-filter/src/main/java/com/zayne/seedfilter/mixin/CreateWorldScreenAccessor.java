@@ -18,6 +18,12 @@ public interface CreateWorldScreenAccessor {
     @Accessor("cheatsEnabled")
     void setCheatsEnabled(boolean cheatsEnabled);
 
+    @Accessor("currentMode")
+    CreateWorldScreen.Mode getCurrentMode();
+
+    @Accessor("currentMode")
+    void setCurrentMode(CreateWorldScreen.Mode mode);
+
     @Invoker("createLevel")
     void invokeCreateLevel();
 }

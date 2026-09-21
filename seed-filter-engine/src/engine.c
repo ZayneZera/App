@@ -153,6 +153,7 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
         out->spawnX = spawn.x;
         out->spawnZ = spawn.z;
         out->enableCheats = cfg->enableCheats;
+        out->creativeMode = cfg->creativeMode;
     }
     return 1;
 }

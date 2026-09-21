@@ -33,6 +33,7 @@ public class SeedFilterConfig {
     public int fortressMaxNetherChunks = 12;
 
     public boolean enableCheats = false;
+    public boolean creativeMode = false;
     public int threadCount = 6;
 
     public static SeedFilterConfig load(Path path) {
@@ -76,6 +77,7 @@ public class SeedFilterConfig {
             case "fortress_enabled": fortressEnabled = value != 0; break;
             case "fortress_max_nether_chunks": fortressMaxNetherChunks = value; break;
             case "enable_cheats": enableCheats = value != 0; break;
+            case "creative_mode": creativeMode = value != 0; break;
             case "thread_count": threadCount = value; break;
             default: break;
         }
@@ -103,6 +105,7 @@ public class SeedFilterConfig {
             lines.add("fortress_enabled=" + bit(fortressEnabled));
             lines.add("fortress_max_nether_chunks=" + fortressMaxNetherChunks);
             lines.add("enable_cheats=" + bit(enableCheats));
+            lines.add("creative_mode=" + bit(creativeMode));
             lines.add("thread_count=" + threadCount);
             Files.write(path, lines);
         } catch (IOException ignored) {

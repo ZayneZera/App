@@ -9,6 +9,7 @@ typedef struct {
     int spawnX;
     int spawnZ;
     int enableCheats;
+    int creativeMode;
 } FilterResult;
 
 /* Funnel counters, mirroring the mod's old ScanStats: "reached" = seeds that already passed

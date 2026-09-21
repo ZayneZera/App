@@ -69,6 +69,7 @@ int main(int argc, char **argv) {
         printf("SpawnX: %d\n", result.spawnX);
         printf("SpawnZ: %d\n", result.spawnZ);
         printf("Cheats: %d\n", result.enableCheats);
+        printf("Creative: %d\n", result.creativeMode);
         printf("Attempts: %ld\n", g_stats.attempts);
         fflush(stdout);
         return 0;

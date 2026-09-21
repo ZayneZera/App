@@ -3,6 +3,7 @@ package com.zayne.seedfilter;
 import com.zayne.seedfilter.gui.EngineMissingScreen;
 import com.zayne.seedfilter.gui.ScanProgressScreen;
 import com.zayne.seedfilter.mixin.CreateWorldScreenAccessor;
+import com.zayne.seedfilter.mixin.CreateWorldScreenModeAccessor;
 import com.zayne.seedfilter.mixin.MoreOptionsDialogAccessor;
 import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
@@ -11,6 +12,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.text.LiteralText;
+import net.minecraft.world.GameMode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -61,8 +63,29 @@ public class SeedFilterMod implements ClientModInitializer {
             accessor.setCheatsEnabled(true);
         }
 
+        if (result.creative) {
+            applyCreativeDefault(accessor);
+        }
+
         accessor.invokeCreateLevel();
         announceComputedSpawn(client, result.spawnX, result.spawnZ);
+    }
+
+    /**
+     * Sets CreateWorldScreen's "currentMode" (the Survival/Creative/Hardcore selector, read at
+     * createLevel() time to pick the actual world game mode) to Creative. Yarn doesn't give the
+     * Mode enum's own constants names, so instead of guessing one, this scans Mode.values() for
+     * whichever one's defaultGameMode is GameMode.CREATIVE.
+     */
+    private static void applyCreativeDefault(CreateWorldScreenAccessor accessor) {
+        for (CreateWorldScreen.Mode mode : CreateWorldScreen.Mode.values()) {
+            GameMode gameMode = ((CreateWorldScreenModeAccessor) (Object) mode).getDefaultGameMode();
+            if (gameMode == GameMode.CREATIVE) {
+                accessor.setCurrentMode(mode);
+                return;
+            }
+        }
+        LOGGER.warn("Could not find a Creative CreateWorldScreen.Mode entry");
     }
 
     /**

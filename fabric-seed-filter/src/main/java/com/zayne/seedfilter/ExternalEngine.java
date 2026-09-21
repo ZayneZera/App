@@ -27,12 +27,14 @@ public class ExternalEngine {
         public final int spawnX;
         public final int spawnZ;
         public final boolean cheats;
+        public final boolean creative;
 
-        public Result(long seed, int spawnX, int spawnZ, boolean cheats) {
+        public Result(long seed, int spawnX, int spawnZ, boolean cheats, boolean creative) {
             this.seed = seed;
             this.spawnX = spawnX;
             this.spawnZ = spawnZ;
             this.cheats = cheats;
+            this.creative = creative;
         }
     }
 
@@ -84,6 +86,7 @@ public class ExternalEngine {
                 Long seed = null;
                 Integer spawnX = null, spawnZ = null;
                 boolean cheats = false;
+                boolean creative = false;
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
@@ -97,6 +100,8 @@ public class ExternalEngine {
                             spawnZ = Integer.parseInt(line.substring("SpawnZ:".length()).trim());
                         } else if (line.startsWith("Cheats:")) {
                             cheats = line.substring("Cheats:".length()).trim().equals("1");
+                        } else if (line.startsWith("Creative:")) {
+                            creative = line.substring("Creative:".length()).trim().equals("1");
                         } else if (line.startsWith("Progress:") && stats != null) {
                             stats.applyProgressLine(line);
                         }
@@ -106,7 +111,7 @@ public class ExternalEngine {
                 process.waitFor();
 
                 if (seed != null && spawnX != null && spawnZ != null) {
-                    future.complete(new Result(seed, spawnX, spawnZ, cheats));
+                    future.complete(new Result(seed, spawnX, spawnZ, cheats, creative));
                 } else {
                     future.completeExceptionally(new IOException("seedfilter.exe returned no seed (cancelled or NoMatch)"));
                 }

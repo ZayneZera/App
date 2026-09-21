@@ -23,6 +23,7 @@ typedef struct {
     int fortressMaxNetherChunks;
 
     int enableCheats;
+    int creativeMode;
 
     int threadCount;
 } FilterConfig;

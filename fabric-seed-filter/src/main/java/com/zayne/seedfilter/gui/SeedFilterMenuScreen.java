@@ -84,6 +84,7 @@ public class SeedFilterMenuScreen extends Screen {
         addDivider(contentX, contentW);
 
         addCheckboxRow(contentX, "Cheats aktivieren", config.enableCheats, v -> config.enableCheats = v);
+        addCheckboxRow(contentX, "Creative aktivieren", config.creativeMode, v -> config.creativeMode = v);
 
         contentHeight = (nextY - (panelY + 14 - scrollOffset)) + 10;
     }
