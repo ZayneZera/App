@@ -1,0 +1,115 @@
+package com.zayne.seedfilter;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Plain key=value config, matching seed-filter-engine/src/config.c exactly (same file format,
+ * same keys) - this mod's in-game menu and the external exe's headless search both read/write
+ * the same seedfilter.cfg.
+ */
+public class SeedFilterConfig {
+    public boolean villageEnabled = true;
+    public int villageMaxChunks = 8;
+
+    public boolean ruinedPortalEnabled = true;
+    public int ruinedPortalMaxChunks = 5;
+    public boolean ruinedPortalLootingSword = false;
+
+    public boolean buriedTreasureEnabled = true;
+    public int buriedTreasureMaxChunks = 4;
+
+    public boolean bastionEnabled = true;
+    public boolean bastionAllowBridge = true;
+    public boolean bastionAllowHousing = true;
+    public boolean bastionAllowStables = true;
+    public boolean bastionAllowTreasure = true;
+    public int bastionMaxNetherChunks = 6;
+
+    public boolean fortressEnabled = true;
+    public int fortressMaxNetherChunks = 12;
+
+    public boolean enableCheats = false;
+    public int threadCount = 6;
+
+    public static SeedFilterConfig load(Path path) {
+        SeedFilterConfig cfg = new SeedFilterConfig();
+        if (!Files.exists(path)) {
+            return cfg;
+        }
+        try {
+            for (String line : Files.readAllLines(path)) {
+                int eq = line.indexOf('=');
+                if (eq < 0) continue;
+                String key = line.substring(0, eq).trim();
+                int value;
+                try {
+                    value = Integer.parseInt(line.substring(eq + 1).trim());
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+                cfg.apply(key, value);
+            }
+        } catch (IOException ignored) {
+        }
+        return cfg;
+    }
+
+    private void apply(String key, int value) {
+        switch (key) {
+            case "village_enabled": villageEnabled = value != 0; break;
+            case "village_max_chunks": villageMaxChunks = value; break;
+            case "ruined_portal_enabled": ruinedPortalEnabled = value != 0; break;
+            case "ruined_portal_max_chunks": ruinedPortalMaxChunks = value; break;
+            case "ruined_portal_looting_sword": ruinedPortalLootingSword = value != 0; break;
+            case "buried_treasure_enabled": buriedTreasureEnabled = value != 0; break;
+            case "buried_treasure_max_chunks": buriedTreasureMaxChunks = value; break;
+            case "bastion_enabled": bastionEnabled = value != 0; break;
+            case "bastion_allow_bridge": bastionAllowBridge = value != 0; break;
+            case "bastion_allow_housing": bastionAllowHousing = value != 0; break;
+            case "bastion_allow_stables": bastionAllowStables = value != 0; break;
+            case "bastion_allow_treasure": bastionAllowTreasure = value != 0; break;
+            case "bastion_max_nether_chunks": bastionMaxNetherChunks = value; break;
+            case "fortress_enabled": fortressEnabled = value != 0; break;
+            case "fortress_max_nether_chunks": fortressMaxNetherChunks = value; break;
+            case "enable_cheats": enableCheats = value != 0; break;
+            case "thread_count": threadCount = value; break;
+            default: break;
+        }
+    }
+
+    public void save(Path path) {
+        try {
+            if (path.getParent() != null) {
+                Files.createDirectories(path.getParent());
+            }
+            List<String> lines = new ArrayList<>();
+            lines.add("village_enabled=" + bit(villageEnabled));
+            lines.add("village_max_chunks=" + villageMaxChunks);
+            lines.add("ruined_portal_enabled=" + bit(ruinedPortalEnabled));
+            lines.add("ruined_portal_max_chunks=" + ruinedPortalMaxChunks);
+            lines.add("ruined_portal_looting_sword=" + bit(ruinedPortalLootingSword));
+            lines.add("buried_treasure_enabled=" + bit(buriedTreasureEnabled));
+            lines.add("buried_treasure_max_chunks=" + buriedTreasureMaxChunks);
+            lines.add("bastion_enabled=" + bit(bastionEnabled));
+            lines.add("bastion_allow_bridge=" + bit(bastionAllowBridge));
+            lines.add("bastion_allow_housing=" + bit(bastionAllowHousing));
+            lines.add("bastion_allow_stables=" + bit(bastionAllowStables));
+            lines.add("bastion_allow_treasure=" + bit(bastionAllowTreasure));
+            lines.add("bastion_max_nether_chunks=" + bastionMaxNetherChunks);
+            lines.add("fortress_enabled=" + bit(fortressEnabled));
+            lines.add("fortress_max_nether_chunks=" + fortressMaxNetherChunks);
+            lines.add("enable_cheats=" + bit(enableCheats));
+            lines.add("thread_count=" + threadCount);
+            Files.write(path, lines);
+        } catch (IOException ignored) {
+        }
+    }
+
+    private static int bit(boolean v) {
+        return v ? 1 : 0;
+    }
+}

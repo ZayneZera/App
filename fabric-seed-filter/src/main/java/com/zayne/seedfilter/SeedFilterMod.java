@@ -26,6 +26,7 @@ public class SeedFilterMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        MenuHotkey.register();
     }
 
     public static void startScanAndCreate(MinecraftClient client, Screen titleScreen) {
