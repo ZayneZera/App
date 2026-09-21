@@ -1,10 +1,9 @@
 package com.zayne.seedfilter;
 
+import com.zayne.seedfilter.gui.EngineMissingScreen;
 import com.zayne.seedfilter.gui.ScanProgressScreen;
 import com.zayne.seedfilter.mixin.CreateWorldScreenAccessor;
 import com.zayne.seedfilter.mixin.MoreOptionsDialogAccessor;
-import com.zayne.seedfilter.scan.ScanStats;
-import com.zayne.seedfilter.scan.SeedScanner;
 import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
@@ -12,33 +11,41 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.text.LiteralText;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * All criteria filtering now lives in the external seedfilter.exe (see seed-filter-engine/ in
+ * the repo) - this mod is just the in-game trigger + world-creation glue around it.
+ */
 public class SeedFilterMod implements ClientModInitializer {
+
+    public static final Logger LOGGER = LogManager.getLogger("seed-filter");
 
     @Override
     public void onInitializeClient() {
     }
 
     public static void startScanAndCreate(MinecraftClient client, Screen titleScreen) {
-        FilterConfig config = FilterConfig.get();
-        AtomicInteger attempts = new AtomicInteger();
-        AtomicBoolean cancelled = new AtomicBoolean(false);
-        ScanStats stats = new ScanStats();
+        if (!ExternalEngine.isInstalled()) {
+            client.openScreen(new EngineMissingScreen(titleScreen));
+            return;
+        }
 
-        client.openScreen(new ScanProgressScreen(titleScreen, attempts, cancelled, stats));
+        AtomicReference<Process> processHolder = new AtomicReference<>();
+        client.openScreen(new ScanProgressScreen(titleScreen, processHolder));
 
-        SeedScanner.scanAsync(config, attempts, cancelled, stats).thenAccept(result -> {
-            if (cancelled.get()) {
-                return;
-            }
-            client.execute(() -> createAndJoin(client, titleScreen, result.seed, result.spawnX, result.spawnZ));
+        ExternalEngine.runAsync(processHolder).thenAccept(result ->
+                client.execute(() -> createAndJoin(client, titleScreen, result))
+        ).exceptionally(error -> {
+            LOGGER.warn("Seed search did not produce a result", error);
+            return null;
         });
     }
 
-    public static void createAndJoin(MinecraftClient client, Screen titleScreen, long seed, int spawnX, int spawnZ) {
+    public static void createAndJoin(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result) {
         CreateWorldScreen screen = new CreateWorldScreen(titleScreen);
         client.openScreen(screen);
 
@@ -46,20 +53,20 @@ public class SeedFilterMod implements ClientModInitializer {
         accessor.getLevelNameField().setText(WorldNaming.nextName());
 
         MoreOptionsDialog dialog = accessor.getMoreOptionsDialog();
-        ((MoreOptionsDialogAccessor) dialog).getSeedTextField().setText(String.valueOf(seed));
+        ((MoreOptionsDialogAccessor) dialog).getSeedTextField().setText(String.valueOf(result.seed));
 
-        if (FilterConfig.get().enableCheats) {
+        if (result.cheats) {
             accessor.setCheatsEnabled(true);
         }
 
         accessor.invokeCreateLevel();
-        announceComputedSpawn(client, spawnX, spawnZ);
+        announceComputedSpawn(client, result.spawnX, result.spawnZ);
     }
 
     /**
-     * Polls (via self-requeuing client.execute, same pattern as the countdown's world-teardown
-     * wait) until the player has actually spawned in, then posts the spawn position our headless
-     * search computed - so it can be compared directly against F3's real coordinates in-game.
+     * Polls (via self-requeuing client.execute) until the player has actually spawned in, then
+     * posts the spawn position the engine computed - so it can be compared directly against F3
+     * in-game.
      */
     private static void announceComputedSpawn(MinecraftClient client, int spawnX, int spawnZ) {
         client.execute(() -> {

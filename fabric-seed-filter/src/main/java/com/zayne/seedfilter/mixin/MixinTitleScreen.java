@@ -1,7 +1,6 @@
 package com.zayne.seedfilter.mixin;
 
 import com.zayne.seedfilter.SeedFilterMod;
-import com.zayne.seedfilter.gui.SeedFilterSettingsScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -33,13 +32,9 @@ public abstract class MixinTitleScreen extends Screen {
         // Same row as the vanilla Singleplayer button (classic title screen layout formula),
         // sitting right next to it, mirroring the golden boots icon on the left of the button.
         int singleplayerRowY = this.height / 4 + 48;
-        int multiplayerRowY = singleplayerRowY + 24;
 
         this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS, button ->
                 SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this)));
-
-        this.addButton(new IconButton(x, multiplayerRowY, size, Items.GLISTERING_MELON_SLICE, button ->
-                MinecraftClient.getInstance().openScreen(new SeedFilterSettingsScreen((Screen) (Object) this))));
     }
 
     private static class IconButton extends ButtonWidget {
