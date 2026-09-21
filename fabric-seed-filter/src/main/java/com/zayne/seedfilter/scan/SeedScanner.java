@@ -35,6 +35,7 @@ public class SeedScanner {
      */
     public static CompletableFuture<Result> scanAsync(FilterConfig config, AtomicInteger attemptsCounter, AtomicBoolean cancelled) {
         LOGGER.info("seed-filter: StructureFeatures.VILLAGE resolved to: {}", StructureFeatures.VILLAGE);
+        LOGGER.info("seed-filter: STRUCTURES map keys: {}", net.minecraft.world.gen.feature.StructureFeature.STRUCTURES.keySet());
 
         ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
         CompletableFuture<Result> future = new CompletableFuture<>();
