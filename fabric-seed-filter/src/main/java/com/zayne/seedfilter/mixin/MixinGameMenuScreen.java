@@ -5,64 +5,51 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
-import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(GameMenuScreen.class)
+/**
+ * Mixes into Screen (not GameMenuScreen directly) and guards with instanceof, same proven
+ * pattern as the coords-display mod's pause-menu hook - GameMenuScreen doesn't reliably
+ * expose its own init()/initWidgets() the way we need to target directly.
+ */
+@Mixin(Screen.class)
 public abstract class MixinGameMenuScreen extends Screen {
-
-    private static final Logger LOGGER = LogManager.getLogger("seed-filter");
 
     protected MixinGameMenuScreen(Text title) {
         super(title);
     }
 
-    @Inject(method = "initWidgets", at = @At("TAIL"))
+    @Inject(method = "init", at = @At("TAIL"))
     private void seedFilter$init(CallbackInfo ci) {
-        int buttonY;
-        try {
-            int lowestY = 0;
-            for (Object child : this.children()) {
-                if (child instanceof AbstractButtonWidget) {
-                    int y = ((AbstractButtonWidgetAccessor) child).getY();
-                    if (y > lowestY) {
-                        lowestY = y;
+        if (!((Object) this instanceof GameMenuScreen)) {
+            return;
+        }
+
+        int size = 20;
+        int margin = 10;
+        int x = this.width - 200 - margin;
+        int y = 10 + size + 4;
+
+        this.addButton(new ButtonWidget(x, y, 200, 20, new LiteralText("Nächster Seed"), button -> {
+            MinecraftClient client = MinecraftClient.getInstance();
+            TitleScreen title = new TitleScreen();
+            client.disconnect(title);
+
+            new Thread(() -> {
+                while (client.world != null) {
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException ignored) {
                     }
                 }
-            }
-            buttonY = lowestY + 24;
-        } catch (Throwable t) {
-            LOGGER.warn("seed-filter: failed to find lowest button position, using fallback", t);
-            buttonY = this.height - 30;
-        }
-
-        try {
-            this.addButton(new ButtonWidget(this.width / 2 - 100, buttonY, 200, 20,
-                    new LiteralText("Nächster Seed"), button -> {
-                MinecraftClient client = MinecraftClient.getInstance();
-                TitleScreen title = new TitleScreen();
-                client.disconnect(title);
-
-                new Thread(() -> {
-                    while (client.world != null) {
-                        try {
-                            Thread.sleep(20);
-                        } catch (InterruptedException ignored) {
-                        }
-                    }
-                    client.execute(() -> SeedFilterMod.startScanAndCreate(client, title));
-                }, "seed-filter-disconnect-wait").start();
-            }));
-        } catch (Throwable t) {
-            LOGGER.error("seed-filter: failed to add Nächster Seed button", t);
-        }
+                client.execute(() -> SeedFilterMod.startScanAndCreate(client, title));
+            }, "seed-filter-disconnect-wait").start();
+        }));
     }
 }
