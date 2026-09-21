@@ -1,6 +1,5 @@
 package com.zayne.seedfilter.scan;
 
-import net.minecraft.util.registry.Registry;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.VanillaLayeredBiomeSource;
 
@@ -11,7 +10,7 @@ import net.minecraft.world.biome.source.VanillaLayeredBiomeSource;
 public class HeadlessBiomeSource {
 
     public static VanillaLayeredBiomeSource create(long seed) {
-        return new VanillaLayeredBiomeSource(seed, false, false, Registry.BIOME);
+        return new VanillaLayeredBiomeSource(seed, false, false);
     }
 
     public static Biome biomeAt(VanillaLayeredBiomeSource source, int blockX, int blockZ) {

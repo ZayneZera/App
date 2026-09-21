@@ -34,7 +34,7 @@ public class ScanProgressScreen extends Screen {
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
         drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, this.height / 2 - 30, 0xFFFFFF);
-        drawCenteredText(matrices, this.textRenderer, "Versuche: " + attempts.get(), this.width / 2, this.height / 2 - 10, 0xAAAAAA);
+        drawCenteredText(matrices, this.textRenderer, new LiteralText("Versuche: " + attempts.get()), this.width / 2, this.height / 2 - 10, 0xAAAAAA);
         super.render(matrices, mouseX, mouseY, delta);
     }
 
