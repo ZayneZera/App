@@ -36,8 +36,8 @@ public class SeedScanner {
     /**
      * Scans random seeds across multiple background threads (pure math + headless biome
      * sampling, no game world involved) and completes as soon as one matches.
-     * Checks: Village, Ruined Portal, Buried Treasure, Bastion, Fortress (position + biome).
-     * NOT checked yet: bastion type (bridge/housing/stables/treasure), chest loot contents.
+     * Checks: Village, Ruined Portal, Buried Treasure, Bastion (position + biome + type), Fortress.
+     * NOT checked yet: chest loot contents.
      */
     public static CompletableFuture<Result> scanAsync(FilterConfig config, AtomicInteger attemptsCounter, AtomicBoolean cancelled) {
         ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
@@ -91,8 +91,7 @@ public class SeedScanner {
             int netherChunkZ = (spawn[1] / 8) >> 4;
             MultiNoiseBiomeSource netherBiomes = HeadlessNetherBiomeSource.create(seed);
 
-            if (config.bastionEnabled && !checkNetherGridStructure(seed, netherBiomes, StructureConfig.BASTION,
-                    StructureFeatures.BASTION_REMNANT, netherChunkX, netherChunkZ, config.bastionMaxNetherChunks)) {
+            if (config.bastionEnabled && !checkBastion(seed, netherBiomes, netherChunkX, netherChunkZ, config)) {
                 return null;
             }
 
@@ -127,6 +126,22 @@ public class SeedScanner {
         int blockZ = candidate.chunkZ * 16 + 8;
         Biome biome = HeadlessNetherBiomeSource.biomeAt(biomes, blockX, blockZ);
         return feature != null && biome.hasStructureFeature(feature);
+    }
+
+    private static boolean checkBastion(long seed, MultiNoiseBiomeSource biomes, int centerChunkX, int centerChunkZ, FilterConfig config) {
+        StructurePlacement.Candidate candidate = StructurePlacement.nearestGridCandidate(seed, StructureConfig.BASTION, centerChunkX, centerChunkZ);
+        if (candidate == null || candidate.chunkDistance > config.bastionMaxNetherChunks) {
+            return false;
+        }
+        int blockX = candidate.chunkX * 16 + 8;
+        int blockZ = candidate.chunkZ * 16 + 8;
+        Biome biome = HeadlessNetherBiomeSource.biomeAt(biomes, blockX, blockZ);
+        if (!biome.hasStructureFeature(StructureFeatures.BASTION_REMNANT)) {
+            return false;
+        }
+        BastionTypeFinder.Type type = BastionTypeFinder.findType(seed, candidate.chunkX, candidate.chunkZ);
+        return BastionTypeFinder.isAllowed(type, config.bastionAllowHousing, config.bastionAllowStables,
+                config.bastionAllowTreasure, config.bastionAllowBridge);
     }
 
     private static boolean checkTreasure(long seed, VanillaLayeredBiomeSource biomes, int spawnChunkX, int spawnChunkZ, int maxChunks) {
