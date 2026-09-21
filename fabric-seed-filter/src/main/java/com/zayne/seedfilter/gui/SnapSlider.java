@@ -77,14 +77,14 @@ public class SnapSlider extends SliderWidget {
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         // Track background, matching the dark panel look instead of vanilla's grey button.
         fill(matrices, this.x, this.y + this.height / 2 - 2, this.x + this.width, this.y + this.height / 2 + 2, DarkTheme.WIDGET_BORDER);
-        fill(matrices, this.x, this.y + this.height / 2 - 1, this.x + this.width, this.y + this.height / 2 + 1, 0xFF2B2B2B);
+        fill(matrices, this.x, this.y + this.height / 2 - 1, this.x + this.width, this.y + this.height / 2 + 1, DarkTheme.WIDGET_BG);
 
         // Tick marks at every snap step (only drawn if they wouldn't be pixel-mush - cap density).
         int steps = max - min;
         if (steps > 0 && steps <= 32) {
             for (int i = 0; i <= steps; i++) {
                 int tx = this.x + 4 + (int) ((this.width - 8) * (i / (double) steps));
-                fill(matrices, tx, this.y + this.height / 2 - 1, tx + 1, this.y + this.height / 2 + 1, 0x80757575);
+                fill(matrices, tx, this.y + this.height / 2 - 1, tx + 1, this.y + this.height / 2 + 1, 0xA0888888);
             }
         }
 

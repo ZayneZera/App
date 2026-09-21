@@ -59,8 +59,8 @@ public class ScanProgressScreen extends Screen {
         double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         int filled = (int) (barW * pct / 100.0);
 
-        fill(matrices, x, y, x + barW, y + barH, 0xFF000000);
-        fill(matrices, x + 1, y + 1, x + barW - 1, y + barH - 1, 0xFF2B2B2B);
+        fill(matrices, x, y, x + barW, y + barH, DarkTheme.WIDGET_BORDER);
+        fill(matrices, x + 1, y + 1, x + barW - 1, y + barH - 1, DarkTheme.WIDGET_BG);
         fill(matrices, x + 1, y + 1, x + 1 + filled, y + barH - 1, DarkTheme.ACCENT);
 
         drawCenteredText(matrices, this.textRenderer, new LiteralText(String.format("%.0f%%", pct)),

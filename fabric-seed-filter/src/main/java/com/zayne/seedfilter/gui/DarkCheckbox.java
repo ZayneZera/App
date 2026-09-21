@@ -27,7 +27,7 @@ public class DarkCheckbox extends ButtonWidget {
 
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
-        int fillColor = checked ? accentColor : 0xFF2B2B2B;
+        int fillColor = checked ? accentColor : DarkTheme.WIDGET_BG;
         fill(matrices, this.x, this.y, this.x + this.width, this.y + this.height, DarkTheme.WIDGET_BORDER);
         fill(matrices, this.x + 1, this.y + 1, this.x + this.width - 1, this.y + this.height - 1, fillColor);
     }
