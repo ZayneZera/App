@@ -57,10 +57,11 @@ public class CountdownScreen extends Screen {
         if (elapsedMillis >= COUNTDOWN_SECONDS * 1000L) {
             triggered = true;
             MinecraftClient client = MinecraftClient.getInstance();
-            // TEMPORARY DEBUG STEP: only disconnect to the title screen, nothing else.
-            // Testing whether the "8x TPS, nothing happens" issue comes from this
-            // disconnect call itself, before re-adding the auto-create-and-join step.
-            client.disconnect(new TitleScreen());
+            // Defer via the task queue instead of calling disconnect() directly from
+            // inside tick() - doing it inline while this screen's own tick is still on
+            // the call stack corrupted client state (broke Quit, broke the boots button
+            // afterward too). Deferring lets this tick() call return first.
+            client.execute(() -> client.disconnect(new TitleScreen()));
         }
     }
 
