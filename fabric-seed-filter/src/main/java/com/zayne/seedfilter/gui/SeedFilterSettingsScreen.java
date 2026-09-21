@@ -70,6 +70,9 @@ public class SeedFilterSettingsScreen extends Screen {
         addToggleRow(centerX, "Aktiv", config.fortressEnabled, v -> config.fortressEnabled = v);
         addIntRow(centerX, "Max. Nether-Chunks (Spawn/8)", config.fortressMaxNetherChunks, v -> config.fortressMaxNetherChunks = v);
 
+        addSectionLabel(centerX, "Welt-Erstellung");
+        addToggleRow(centerX, "Cheats aktivieren", config.enableCheats, v -> config.enableCheats = v);
+
         this.addButton(new ButtonWidget(centerX - 100, this.height - 28, 200, 20, new LiteralText("Fertig"), button -> {
             saveAll();
             this.client.openScreen(this.parent);

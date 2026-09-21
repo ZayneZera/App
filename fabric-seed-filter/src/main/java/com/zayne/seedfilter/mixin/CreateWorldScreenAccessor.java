@@ -15,6 +15,9 @@ public interface CreateWorldScreenAccessor {
     @Accessor("moreOptionsDialog")
     MoreOptionsDialog getMoreOptionsDialog();
 
+    @Accessor("cheatsEnabled")
+    void setCheatsEnabled(boolean cheatsEnabled);
+
     @Invoker("createLevel")
     void invokeCreateLevel();
 }

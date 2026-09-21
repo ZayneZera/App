@@ -40,6 +40,9 @@ public class FilterConfig {
     public boolean fortressEnabled = true;
     public int fortressMaxNetherChunks = 12;
 
+    // World creation
+    public boolean enableCheats = false;
+
     public static FilterConfig get() {
         if (instance == null) {
             instance = load();

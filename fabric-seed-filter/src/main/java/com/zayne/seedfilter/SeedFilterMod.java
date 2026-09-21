@@ -45,6 +45,10 @@ public class SeedFilterMod implements ClientModInitializer {
         MoreOptionsDialog dialog = accessor.getMoreOptionsDialog();
         ((MoreOptionsDialogAccessor) dialog).getSeedTextField().setText(String.valueOf(seed));
 
+        if (FilterConfig.get().enableCheats) {
+            accessor.setCheatsEnabled(true);
+        }
+
         accessor.invokeCreateLevel();
     }
 }
