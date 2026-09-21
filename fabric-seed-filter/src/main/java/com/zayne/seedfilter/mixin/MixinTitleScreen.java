@@ -26,11 +26,12 @@ public abstract class MixinTitleScreen extends Screen {
     @Inject(method = "init", at = @At("TAIL"))
     private void seedFilter$init(CallbackInfo ci) {
         int size = 20; // same height as vanilla's 20px-tall menu buttons, so a 24px row gap doesn't overlap
-        int margin = 10;
-        int x = this.width - size - margin;
+        int gap = 4;
+        int mainButtonHalfWidth = 100; // vanilla title screen buttons are 200 wide, centered
+        int x = this.width / 2 + mainButtonHalfWidth + gap;
 
         // Same row as the vanilla Singleplayer button (classic title screen layout formula),
-        // mirrored to the right edge so it lines up with the golden boots icon on the left.
+        // sitting right next to it, mirroring the golden boots icon on the left of the button.
         int singleplayerRowY = this.height / 4 + 48;
         int multiplayerRowY = singleplayerRowY + 24;
 
