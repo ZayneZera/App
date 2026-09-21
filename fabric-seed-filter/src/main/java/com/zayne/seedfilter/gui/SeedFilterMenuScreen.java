@@ -131,28 +131,10 @@ public class SeedFilterMenuScreen extends Screen {
         super.render(matrices, mouseX, mouseY, delta);
     }
 
-    /**
-     * A true chamfered (diagonally-cut) rounded rect, built from two overlapping cross-shaped
-     * fills per layer instead of "fill the whole rect, then patch the corners back to the border
-     * color". That patch approach never actually cut the outer silhouette - the outermost ring
-     * was always a sharp 90-degree rectangle, so the "rounding" only showed up as a same-colored
-     * square nub sitting just inside the corner, not an actual rounded/cut corner.
-     *
-     * Here, the r x r corner squares are simply never painted by EITHER the border or fill layer,
-     * for both of the two overlapping strips that make up each layer - so at the corners, nothing
-     * is drawn at all and the real screen behind (renderBackground's dim/blur) shows through,
-     * producing an actual diagonal cut instead of a fake patch.
-     */
+    /** Plain rectangle, sharp corners - gave up on faking rounded corners with flat fills. */
     private static void fillRounded(MatrixStack matrices, int x, int y, int w, int h, int fillColor, int borderColor) {
-        int r = 5;
-
-        // Border layer: outer silhouette, corners left untouched.
-        fill(matrices, x, y + r, x + w, y + h - r, borderColor);
-        fill(matrices, x + r, y, x + w - r, y + h, borderColor);
-
-        // Fill layer: same chamfer, inset 1px on every side so a 1px border ring stays visible.
-        fill(matrices, x + 1, y + r, x + w - 1, y + h - r, fillColor);
-        fill(matrices, x + r, y + 1, x + w - r, y + h - 1, fillColor);
+        fill(matrices, x, y, x + w, y + h, borderColor);
+        fill(matrices, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
     }
 
     @Override
