@@ -26,6 +26,8 @@ public class SeedFilterSettingsScreen extends Screen {
     private final List<String> rowLabelTexts = new ArrayList<>();
 
     private int nextY;
+    private int scrollOffset = 0;
+    private int contentHeight = 0;
 
     public SeedFilterSettingsScreen(Screen parent) {
         super(new LiteralText("Seed-Filter Einstellungen"));
@@ -41,7 +43,7 @@ public class SeedFilterSettingsScreen extends Screen {
         this.sectionLabelTexts.clear();
         this.rowLabelYs.clear();
         this.rowLabelTexts.clear();
-        this.nextY = 30;
+        this.nextY = 30 - scrollOffset;
 
         int centerX = this.width / 2;
 
@@ -72,6 +74,8 @@ public class SeedFilterSettingsScreen extends Screen {
 
         addSectionLabel(centerX, "Welt-Erstellung");
         addToggleRow(centerX, "Cheats aktivieren", config.enableCheats, v -> config.enableCheats = v);
+
+        this.contentHeight = this.nextY - (30 - scrollOffset);
 
         this.addButton(new ButtonWidget(centerX - 100, this.height - 28, 200, 20, new LiteralText("Fertig"), button -> {
             saveAll();
@@ -146,5 +150,15 @@ public class SeedFilterSettingsScreen extends Screen {
         }
 
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        int visibleHeight = this.height - 60;
+        int maxScroll = Math.max(0, this.contentHeight - visibleHeight);
+        int newOffset = this.scrollOffset - (int) (amount * 15);
+        this.scrollOffset = Math.max(0, Math.min(newOffset, maxScroll));
+        this.client.openScreen(this);
+        return true;
     }
 }
