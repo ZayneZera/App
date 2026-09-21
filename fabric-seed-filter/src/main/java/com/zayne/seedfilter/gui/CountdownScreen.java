@@ -109,30 +109,30 @@ public class CountdownScreen extends Screen {
      * criterion is the actual bottleneck instead of just watching a climbing counter.
      */
     private void renderFunnel(MatrixStack matrices) {
-        int total = Math.max(1, attempts.get());
         FilterConfig config = FilterConfig.get();
         int y = this.height / 2 + 25;
         if (config.villageEnabled) {
-            y = drawFunnelLine(matrices, "Dorf", stats.passedVillage.get(), total, y);
+            y = drawFunnelLine(matrices, "Dorf", stats.passedVillage.get(), stats.reachedVillage.get(), y);
         }
         if (config.ruinedPortalEnabled) {
-            y = drawFunnelLine(matrices, "Ruined Portal", stats.passedRuinedPortal.get(), total, y);
+            y = drawFunnelLine(matrices, "Ruined Portal", stats.passedRuinedPortal.get(), stats.reachedRuinedPortal.get(), y);
         }
         if (config.buriedTreasureEnabled) {
-            y = drawFunnelLine(matrices, "Buried Treasure", stats.passedTreasure.get(), total, y);
+            y = drawFunnelLine(matrices, "Buried Treasure", stats.passedTreasure.get(), stats.reachedTreasure.get(), y);
         }
         if (config.bastionEnabled) {
-            y = drawFunnelLine(matrices, "Bastion", stats.passedBastion.get(), total, y);
+            y = drawFunnelLine(matrices, "Bastion", stats.passedBastion.get(), stats.reachedBastion.get(), y);
         }
         if (config.fortressEnabled) {
-            drawFunnelLine(matrices, "Fortress", stats.passedFortress.get(), total, y);
+            drawFunnelLine(matrices, "Fortress", stats.passedFortress.get(), stats.reachedFortress.get(), y);
         }
     }
 
-    private int drawFunnelLine(MatrixStack matrices, String label, int passed, int total, int y) {
-        double pct = 100.0 * passed / total;
+    /** Shows "passed/reached" (not percent-of-total-attempts) so a tiny sample reads as tiny, not as a scary 0.00%. */
+    private int drawFunnelLine(MatrixStack matrices, String label, int passed, int reached, int y) {
+        String pct = reached > 0 ? String.format(" (%.1f%%)", 100.0 * passed / reached) : "";
         drawCenteredText(matrices, this.textRenderer,
-                new LiteralText(String.format("%s: %.2f%%", label, pct)), this.width / 2, y, 0x77AAFF);
+                new LiteralText(label + ": " + passed + "/" + reached + pct), this.width / 2, y, 0x77AAFF);
         return y + 10;
     }
 

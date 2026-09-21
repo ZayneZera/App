@@ -77,6 +77,7 @@ public class SeedScanner {
         int spawnChunkZ = spawn[1] >> 4;
 
         if (config.villageEnabled) {
+            if (stats != null) stats.reachedVillage.incrementAndGet();
             if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
                     StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
                 return null;
@@ -85,6 +86,7 @@ public class SeedScanner {
         }
 
         if (config.ruinedPortalEnabled) {
+            if (stats != null) stats.reachedRuinedPortal.incrementAndGet();
             if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
                     StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
                 return null;
@@ -93,6 +95,7 @@ public class SeedScanner {
         }
 
         if (config.buriedTreasureEnabled) {
+            if (stats != null) stats.reachedTreasure.incrementAndGet();
             if (!checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
                 return null;
             }
@@ -106,6 +109,7 @@ public class SeedScanner {
             MultiNoiseBiomeSource netherBiomes = HeadlessNetherBiomeSource.create(seed);
 
             if (config.bastionEnabled) {
+                if (stats != null) stats.reachedBastion.incrementAndGet();
                 if (!checkBastion(seed, netherBiomes, netherChunkX, netherChunkZ, config)) {
                     return null;
                 }
@@ -113,6 +117,7 @@ public class SeedScanner {
             }
 
             if (config.fortressEnabled) {
+                if (stats != null) stats.reachedFortress.incrementAndGet();
                 if (!checkFortress(seed, netherBiomes, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
                     return null;
                 }
