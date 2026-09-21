@@ -1,6 +1,7 @@
 package com.zayne.seedfilter.scan;
 
 import com.zayne.seedfilter.FilterConfig;
+import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.VanillaLayeredBiomeSource;
 
 import java.util.Random;
@@ -59,6 +60,13 @@ public class SeedScanner {
             StructurePlacement.Candidate village = StructurePlacement.nearestGridCandidate(
                     seed, StructureConfig.VILLAGE, spawnChunkX, spawnChunkZ);
             if (village == null || village.chunkDistance > config.villageMaxChunks) {
+                return false;
+            }
+
+            int villageBlockX = village.chunkX * 16 + 8;
+            int villageBlockZ = village.chunkZ * 16 + 8;
+            Biome villageBiome = HeadlessBiomeSource.biomeAt(overworldBiomes, villageBlockX, villageBlockZ);
+            if (!villageBiome.hasStructureFeature(StructureFeatures.VILLAGE)) {
                 return false;
             }
         }
