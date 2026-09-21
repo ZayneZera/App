@@ -5,24 +5,29 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Mixes into Screen (not GameMenuScreen directly) and guards with instanceof, same proven
- * pattern as the coords-display mod's pause-menu hook - GameMenuScreen doesn't reliably
- * expose its own init()/initWidgets() the way we need to target directly.
+ * Mixes directly into Screen (guarded by instanceof GameMenuScreen). Since the target IS
+ * Screen itself (not a subclass of it), we can't use the "extends Screen" trick (that would
+ * be a class extending itself after merging) - @Shadow declares the members we need instead.
  */
 @Mixin(Screen.class)
-public abstract class MixinGameMenuScreen extends Screen {
+public class MixinGameMenuScreen {
 
-    protected MixinGameMenuScreen(Text title) {
-        super(title);
+    @Shadow
+    protected int width;
+
+    @Shadow
+    protected <T extends AbstractButtonWidget> T addButton(T button) {
+        throw new UnsupportedOperationException("shadowed");
     }
 
     @Inject(method = "init", at = @At("TAIL"))
@@ -31,10 +36,9 @@ public abstract class MixinGameMenuScreen extends Screen {
             return;
         }
 
-        int size = 20;
         int margin = 10;
         int x = this.width - 200 - margin;
-        int y = 10 + size + 4;
+        int y = 10 + 20 + 4;
 
         this.addButton(new ButtonWidget(x, y, 200, 20, new LiteralText("Nächster Seed"), button -> {
             MinecraftClient client = MinecraftClient.getInstance();
