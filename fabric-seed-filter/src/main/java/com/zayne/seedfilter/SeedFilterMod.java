@@ -11,6 +11,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -68,7 +69,7 @@ public class SeedFilterMod implements ClientModInitializer {
         }
 
         accessor.invokeCreateLevel();
-        announceComputedSpawn(client, result.spawnX, result.spawnZ);
+        announceSpawnOffset(client, result.spawnX, result.spawnZ);
     }
 
     /**
@@ -120,19 +121,32 @@ public class SeedFilterMod implements ClientModInitializer {
     }
 
     /**
-     * Polls (via self-requeuing client.execute) until the player has actually spawned in, then
-     * posts the spawn position the engine computed - so it can be compared directly against F3
-     * in-game.
+     * Polls (via self-requeuing client.execute) until the player has actually spawned in, waits
+     * a few extra ticks for the position to settle (right when the player entity first appears,
+     * its position can still be a temporary placeholder before the terrain-height snap happens),
+     * then compares it against the engine's calculated spawn itself and posts the offset - no
+     * more manual F3 comparison needed.
      */
-    private static void announceComputedSpawn(MinecraftClient client, int spawnX, int spawnZ) {
+    private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ) {
+        announceSpawnOffset(client, calcX, calcZ, 10);
+    }
+
+    private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ, int settleTicks) {
         client.execute(() -> {
             if (client.player == null) {
-                announceComputedSpawn(client, spawnX, spawnZ);
+                announceSpawnOffset(client, calcX, calcZ, settleTicks);
                 return;
             }
+            if (settleTicks > 0) {
+                announceSpawnOffset(client, calcX, calcZ, settleTicks - 1);
+                return;
+            }
+            BlockPos pos = client.player.getBlockPos();
+            int dx = Math.abs(pos.getX() - calcX);
+            int dz = Math.abs(pos.getZ() - calcZ);
+            int total = dx + dz;
             client.player.sendMessage(new LiteralText(
-                    "§e[SeedFilter] Berechneter Spawn: X=" + spawnX + " Z=" + spawnZ
-                            + "  (mit F3 vergleichen)"), false);
+                    "§e[SeedFilter] Calculated Offset: " + dx + " + " + dz + " = " + total + " Blöcke"), false);
         });
     }
 }
