@@ -18,6 +18,7 @@ public class ScanProgressScreen extends Screen {
     private final EngineStats stats;
     private final SeedFilterConfig config;
     private double maxPctSeen = 0.0;
+    private final SmoothedValue smoothedPct = new SmoothedValue();
 
     public ScanProgressScreen(Screen parent, AtomicReference<Process> processHolder, EngineStats stats) {
         super(new LiteralText("Suche passende Seed..."));
@@ -63,7 +64,7 @@ public class ScanProgressScreen extends Screen {
         double expectedAttempts = ProbabilityEstimator.expectedAttemptsForDisplay(config, stats);
         double rawPct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         maxPctSeen = Math.max(maxPctSeen, rawPct);
-        double pct = maxPctSeen;
+        double pct = smoothedPct.update(maxPctSeen);
         // Inner fillable area is only barW - 2 wide (1px border on each side), so the fill must
         // be capped to that, not to barW itself - at 100% "filled = barW" pushed 1px past the
         // right border.
