@@ -29,7 +29,6 @@ public class SeedFilterMenuScreen extends Screen {
     private int panelX, panelY, panelW, panelH;
     private int nextY;
 
-    private final List<Object[]> sectionLabels = new ArrayList<>();
     private final List<Object[]> checkboxLabels = new ArrayList<>();
     private final List<Integer> dividerYs = new ArrayList<>();
 
@@ -47,7 +46,6 @@ public class SeedFilterMenuScreen extends Screen {
     protected void init() {
         this.buttons.clear();
         this.children.clear();
-        sectionLabels.clear();
         checkboxLabels.clear();
         dividerYs.clear();
 
@@ -60,20 +58,20 @@ public class SeedFilterMenuScreen extends Screen {
         int contentW = panelW - 32;
         nextY = panelY + 14 - scrollOffset;
 
-        addSection("Ruined Portal", contentX, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
+        addSection("Ruined Portal", contentX, contentW, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
         addCheckboxRow(contentX, "Looting", config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.ruinedPortalMaxChunks, v -> config.ruinedPortalMaxChunks = v);
         addDivider(contentX, contentW);
 
-        addSection("Village", contentX, config.villageEnabled, v -> config.villageEnabled = v);
+        addSection("Village", contentX, contentW, config.villageEnabled, v -> config.villageEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.villageMaxChunks, v -> config.villageMaxChunks = v);
         addDivider(contentX, contentW);
 
-        addSection("Buried Treasure", contentX, config.buriedTreasureEnabled, v -> config.buriedTreasureEnabled = v);
+        addSection("Buried Treasure", contentX, contentW, config.buriedTreasureEnabled, v -> config.buriedTreasureEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.buriedTreasureMaxChunks, v -> config.buriedTreasureMaxChunks = v);
         addDivider(contentX, contentW);
 
-        addSection("Bastion", contentX, config.bastionEnabled, v -> config.bastionEnabled = v);
+        addSection("Bastion", contentX, contentW, config.bastionEnabled, v -> config.bastionEnabled = v);
         addCheckboxRow(contentX, "Bridge", config.bastionAllowBridge, v -> config.bastionAllowBridge = v);
         addCheckboxRow(contentX, "Housing", config.bastionAllowHousing, v -> config.bastionAllowHousing = v);
         addCheckboxRow(contentX, "Stables", config.bastionAllowStables, v -> config.bastionAllowStables = v);
@@ -81,7 +79,7 @@ public class SeedFilterMenuScreen extends Screen {
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.bastionMaxNetherChunks, v -> config.bastionMaxNetherChunks = v);
         addDivider(contentX, contentW);
 
-        addSection("Fortress", contentX, config.fortressEnabled, v -> config.fortressEnabled = v);
+        addSection("Fortress", contentX, contentW, config.fortressEnabled, v -> config.fortressEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.fortressMaxNetherChunks, v -> config.fortressMaxNetherChunks = v);
         addDivider(contentX, contentW);
 
@@ -90,10 +88,9 @@ public class SeedFilterMenuScreen extends Screen {
         contentHeight = (nextY - (panelY + 14 - scrollOffset)) + 10;
     }
 
-    private void addSection(String name, int x, boolean initial, Consumer<Boolean> setter) {
-        this.addButton(new DarkCheckbox(x, nextY, 12, initial, DarkTheme.ACCENT, setter));
-        sectionLabels.add(new Object[]{name, x + 18, nextY + 2});
-        nextY += 20;
+    private void addSection(String name, int x, int w, boolean initial, Consumer<Boolean> setter) {
+        this.addButton(new SectionToggleButton(x, nextY, w, 18, name, initial, setter));
+        nextY += 24;
     }
 
     private void addCheckboxRow(int x, String label, boolean initial, Consumer<Boolean> setter) {
@@ -124,11 +121,6 @@ public class SeedFilterMenuScreen extends Screen {
             fill(matrices, panelX + 12, y, panelX + panelW - 12, y + 1, DarkTheme.BORDER);
         }
 
-        for (Object[] entry : sectionLabels) {
-            int y = (int) entry[2];
-            if (y < panelY || y > panelY + panelH - 10) continue;
-            drawStringWithShadow(matrices, this.textRenderer, (String) entry[0], (int) entry[1], y, DarkTheme.HEADING);
-        }
         for (Object[] entry : checkboxLabels) {
             int y = (int) entry[2];
             if (y < panelY || y > panelY + panelH - 10) continue;

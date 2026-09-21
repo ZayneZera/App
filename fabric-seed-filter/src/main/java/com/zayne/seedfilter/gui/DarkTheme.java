@@ -13,8 +13,8 @@ public class DarkTheme {
     public static final int WIDGET_BORDER = 0xFF5A5A5A;
     public static final int TEXT = 0xFFECEAE3;
     public static final int TEXT_DIM = 0xFF9C9C9C;
-    public static final int ACCENT = 0xFF6294CF;
-    public static final int HEADING = 0xFF6EA6E8;
+    public static final int ACCENT = 0xFF5AD65A;
+    public static final int HEADING = 0xFF5AD65A;
 
     private DarkTheme() {
     }

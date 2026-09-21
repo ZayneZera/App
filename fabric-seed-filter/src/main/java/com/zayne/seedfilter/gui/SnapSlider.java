@@ -76,8 +76,9 @@ public class SnapSlider extends SliderWidget {
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         // Track background, matching the dark panel look instead of vanilla's grey button.
+        // Border must be inset on ALL sides (including left/right) or the ends look open/cut off.
         fill(matrices, this.x, this.y + this.height / 2 - 2, this.x + this.width, this.y + this.height / 2 + 2, DarkTheme.WIDGET_BORDER);
-        fill(matrices, this.x, this.y + this.height / 2 - 1, this.x + this.width, this.y + this.height / 2 + 1, DarkTheme.WIDGET_BG);
+        fill(matrices, this.x + 1, this.y + this.height / 2 - 1, this.x + this.width - 1, this.y + this.height / 2 + 1, DarkTheme.WIDGET_BG);
 
         // Tick marks at every snap step (only drawn if they wouldn't be pixel-mush - cap density).
         int steps = max - min;
