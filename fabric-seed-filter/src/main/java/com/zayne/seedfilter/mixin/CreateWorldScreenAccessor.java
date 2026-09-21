@@ -18,17 +18,6 @@ public interface CreateWorldScreenAccessor {
     @Accessor("cheatsEnabled")
     void setCheatsEnabled(boolean cheatsEnabled);
 
-    // currentMode's real type is the package-private CreateWorldScreen.Mode, which our mod's
-    // package can't reference directly (compile error: "Mode is not public in
-    // CreateWorldScreen"). Object works fine for a Mixin accessor - it's plain bytecode field
-    // access under the hood, not a Java-level type check - and the caller uses reflection to
-    // work with the actual value (see SeedFilterMod.applyCreativeDefault).
-    @Accessor("currentMode")
-    Object getCurrentMode();
-
-    @Accessor("currentMode")
-    void setCurrentMode(Object mode);
-
     @Invoker("createLevel")
     void invokeCreateLevel();
 }

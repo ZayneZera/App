@@ -64,7 +64,7 @@ public class SeedFilterMod implements ClientModInitializer {
         }
 
         if (result.creative) {
-            applyCreativeDefault(accessor);
+            applyCreativeDefault(screen);
         }
 
         accessor.invokeCreateLevel();
@@ -72,33 +72,51 @@ public class SeedFilterMod implements ClientModInitializer {
     }
 
     /**
-     * Sets CreateWorldScreen's "currentMode" (the Survival/Creative/Hardcore selector, read at
-     * createLevel() time to pick the actual world game mode) to Creative.
+     * Sets CreateWorldScreen's Survival/Creative/Hardcore selector field to Creative, so
+     * createLevel() picks Creative as the actual world game mode.
      *
-     * currentMode's real type is CreateWorldScreen's own package-private "Mode" enum, which our
-     * mod's package can't reference as a Java type at all (confirmed by a real compile error:
-     * "Mode is not public in CreateWorldScreen"). Reflection sidesteps that entirely - once we
-     * have a live Mode instance (via the Object-typed accessor), getClass() gives us its real
-     * runtime Class regardless of source-level visibility, and getEnumConstants()/setAccessible
-     * work on it the same way they would for any enum.
+     * That field's exact name turned out to be a moving target across Yarn mapping builds (our
+     * project pins 1.16.1+build.21, but the name we looked up came from a later build and
+     * didn't exist yet in build.21 - "Could not locate @Accessor target currentMode"). Rather
+     * than keep guessing names per build, this scans CreateWorldScreen's own declared fields for
+     * one whose TYPE is a nested enum declared inside CreateWorldScreen itself (there's only one
+     * such field - the mode selector), then within that enum's constants finds whichever one
+     * carries a field of type GameMode equal to GameMode.CREATIVE. Field/type *names* changing
+     * between mapping builds doesn't affect this at all, since nothing here is looked up by name.
      */
-    private static void applyCreativeDefault(CreateWorldScreenAccessor accessor) {
+    private static void applyCreativeDefault(CreateWorldScreen screen) {
         try {
-            Object currentMode = accessor.getCurrentMode();
-            Class<?> modeClass = currentMode.getClass();
-            Field defaultGameModeField = modeClass.getDeclaredField("defaultGameMode");
-            defaultGameModeField.setAccessible(true);
-
-            for (Object mode : modeClass.getEnumConstants()) {
-                if (defaultGameModeField.get(mode) == GameMode.CREATIVE) {
-                    accessor.setCurrentMode(mode);
-                    return;
+            for (Field field : CreateWorldScreen.class.getDeclaredFields()) {
+                Class<?> fieldType = field.getType();
+                if (!fieldType.isEnum() || fieldType.getEnclosingClass() != CreateWorldScreen.class) {
+                    continue;
+                }
+                Field gameModeField = findFieldOfType(fieldType, GameMode.class);
+                if (gameModeField == null) {
+                    continue;
+                }
+                gameModeField.setAccessible(true);
+                for (Object candidate : fieldType.getEnumConstants()) {
+                    if (gameModeField.get(candidate) == GameMode.CREATIVE) {
+                        field.setAccessible(true);
+                        field.set(screen, candidate);
+                        return;
+                    }
                 }
             }
-            LOGGER.warn("Could not find a Creative CreateWorldScreen.Mode entry");
+            LOGGER.warn("Could not find a Creative mode field on CreateWorldScreen via reflection");
         } catch (ReflectiveOperationException e) {
             LOGGER.warn("Failed to set Creative game mode default", e);
         }
+    }
+
+    private static Field findFieldOfType(Class<?> owner, Class<?> type) {
+        for (Field f : owner.getDeclaredFields()) {
+            if (f.getType() == type) {
+                return f;
+            }
+        }
+        return null;
     }
 
     /**
