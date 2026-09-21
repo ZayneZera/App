@@ -3,6 +3,7 @@ package com.zayne.seedfilter;
 import com.zayne.seedfilter.gui.ScanProgressScreen;
 import com.zayne.seedfilter.mixin.CreateWorldScreenAccessor;
 import com.zayne.seedfilter.mixin.MoreOptionsDialogAccessor;
+import com.zayne.seedfilter.scan.ScanStats;
 import com.zayne.seedfilter.scan.SeedScanner;
 import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
@@ -25,10 +26,11 @@ public class SeedFilterMod implements ClientModInitializer {
         FilterConfig config = FilterConfig.get();
         AtomicInteger attempts = new AtomicInteger();
         AtomicBoolean cancelled = new AtomicBoolean(false);
+        ScanStats stats = new ScanStats();
 
-        client.openScreen(new ScanProgressScreen(titleScreen, attempts, cancelled));
+        client.openScreen(new ScanProgressScreen(titleScreen, attempts, cancelled, stats));
 
-        SeedScanner.scanAsync(config, attempts, cancelled).thenAccept(result -> {
+        SeedScanner.scanAsync(config, attempts, cancelled, stats).thenAccept(result -> {
             if (cancelled.get()) {
                 return;
             }

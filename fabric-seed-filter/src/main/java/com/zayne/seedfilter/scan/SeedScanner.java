@@ -40,6 +40,10 @@ public class SeedScanner {
      * NOT checked yet: chest loot contents.
      */
     public static CompletableFuture<Result> scanAsync(FilterConfig config, AtomicInteger attemptsCounter, AtomicBoolean cancelled) {
+        return scanAsync(config, attemptsCounter, cancelled, null);
+    }
+
+    public static CompletableFuture<Result> scanAsync(FilterConfig config, AtomicInteger attemptsCounter, AtomicBoolean cancelled, ScanStats stats) {
         ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
         CompletableFuture<Result> future = new CompletableFuture<>();
 
@@ -49,7 +53,7 @@ public class SeedScanner {
                 while (!cancelled.get() && !future.isDone()) {
                     long seed = rnd.nextLong();
                     attemptsCounter.incrementAndGet();
-                    int[] spawn = matches(seed, config);
+                    int[] spawn = matches(seed, config, stats);
                     if (spawn != null) {
                         future.complete(new Result(seed, spawn[0], spawn[1]));
                         return;
@@ -64,25 +68,35 @@ public class SeedScanner {
 
     /**
      * Returns the computed [spawnX, spawnZ] on a match, or null if the seed doesn't qualify.
+     * stats may be null (no funnel tracking needed).
      */
-    private static int[] matches(long seed, FilterConfig config) {
+    private static int[] matches(long seed, FilterConfig config, ScanStats stats) {
         VanillaLayeredBiomeSource overworldBiomes = HeadlessBiomeSource.create(seed);
         int[] spawn = SpawnFinder.findRealOverworldSpawn(seed, overworldBiomes);
         int spawnChunkX = spawn[0] >> 4;
         int spawnChunkZ = spawn[1] >> 4;
 
-        if (config.villageEnabled && !checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
-                StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
-            return null;
+        if (config.villageEnabled) {
+            if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
+                    StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
+                return null;
+            }
+            if (stats != null) stats.passedVillage.incrementAndGet();
         }
 
-        if (config.ruinedPortalEnabled && !checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
-                StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
-            return null;
+        if (config.ruinedPortalEnabled) {
+            if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
+                    StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
+                return null;
+            }
+            if (stats != null) stats.passedRuinedPortal.incrementAndGet();
         }
 
-        if (config.buriedTreasureEnabled && !checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
-            return null;
+        if (config.buriedTreasureEnabled) {
+            if (!checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
+                return null;
+            }
+            if (stats != null) stats.passedTreasure.incrementAndGet();
         }
 
         if (config.bastionEnabled || config.fortressEnabled) {
@@ -91,12 +105,18 @@ public class SeedScanner {
             int netherChunkZ = (spawn[1] / 8) >> 4;
             MultiNoiseBiomeSource netherBiomes = HeadlessNetherBiomeSource.create(seed);
 
-            if (config.bastionEnabled && !checkBastion(seed, netherBiomes, netherChunkX, netherChunkZ, config)) {
-                return null;
+            if (config.bastionEnabled) {
+                if (!checkBastion(seed, netherBiomes, netherChunkX, netherChunkZ, config)) {
+                    return null;
+                }
+                if (stats != null) stats.passedBastion.incrementAndGet();
             }
 
-            if (config.fortressEnabled && !checkFortress(seed, netherBiomes, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
-                return null;
+            if (config.fortressEnabled) {
+                if (!checkFortress(seed, netherBiomes, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
+                    return null;
+                }
+                if (stats != null) stats.passedFortress.incrementAndGet();
             }
         }
 

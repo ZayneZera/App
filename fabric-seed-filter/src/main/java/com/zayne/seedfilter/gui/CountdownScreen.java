@@ -2,6 +2,7 @@ package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.FilterConfig;
 import com.zayne.seedfilter.SeedFilterMod;
+import com.zayne.seedfilter.scan.ScanStats;
 import com.zayne.seedfilter.scan.SeedScanner;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -29,18 +30,19 @@ public class CountdownScreen extends Screen {
     private final long startTimeMillis;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
     private final AtomicInteger attempts = new AtomicInteger();
+    private final ScanStats stats = new ScanStats();
     private final CompletableFuture<SeedScanner.Result> scanFuture;
     private boolean triggered = false;
 
     public CountdownScreen() {
         super(new LiteralText("Nächster Seed"));
         this.startTimeMillis = System.currentTimeMillis();
-        this.scanFuture = SeedScanner.scanAsync(FilterConfig.get(), attempts, cancelled);
+        this.scanFuture = SeedScanner.scanAsync(FilterConfig.get(), attempts, cancelled, stats);
     }
 
     @Override
     protected void init() {
-        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 50, 150, 20,
+        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 90, 150, 20,
                 new LiteralText("Abbrechen"), button -> {
             cancelled.set(true);
             this.client.openScreen(null);
@@ -97,7 +99,41 @@ public class CountdownScreen extends Screen {
         drawCenteredText(matrices, this.textRenderer, new LiteralText("Suche Seed... Versuche: " + attempts.get()),
                 this.width / 2, this.height / 2 + 10, 0xAAAAAA);
 
+        renderFunnel(matrices);
+
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    /**
+     * Live "how many attempts survive each enabled criterion" funnel, so it's obvious which
+     * criterion is the actual bottleneck instead of just watching a climbing counter.
+     */
+    private void renderFunnel(MatrixStack matrices) {
+        int total = Math.max(1, attempts.get());
+        FilterConfig config = FilterConfig.get();
+        int y = this.height / 2 + 25;
+        if (config.villageEnabled) {
+            y = drawFunnelLine(matrices, "Dorf", stats.passedVillage.get(), total, y);
+        }
+        if (config.ruinedPortalEnabled) {
+            y = drawFunnelLine(matrices, "Ruined Portal", stats.passedRuinedPortal.get(), total, y);
+        }
+        if (config.buriedTreasureEnabled) {
+            y = drawFunnelLine(matrices, "Buried Treasure", stats.passedTreasure.get(), total, y);
+        }
+        if (config.bastionEnabled) {
+            y = drawFunnelLine(matrices, "Bastion", stats.passedBastion.get(), total, y);
+        }
+        if (config.fortressEnabled) {
+            drawFunnelLine(matrices, "Fortress", stats.passedFortress.get(), total, y);
+        }
+    }
+
+    private int drawFunnelLine(MatrixStack matrices, String label, int passed, int total, int y) {
+        double pct = 100.0 * passed / total;
+        drawCenteredText(matrices, this.textRenderer,
+                new LiteralText(String.format("%s: %.2f%%", label, pct)), this.width / 2, y, 0x77AAFF);
+        return y + 10;
     }
 
     @Override
