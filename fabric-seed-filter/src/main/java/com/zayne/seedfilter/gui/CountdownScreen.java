@@ -57,20 +57,10 @@ public class CountdownScreen extends Screen {
         if (elapsedMillis >= COUNTDOWN_SECONDS * 1000L) {
             triggered = true;
             MinecraftClient client = MinecraftClient.getInstance();
-            TitleScreen title = new TitleScreen();
-            client.disconnect(title);
-            waitThenCreate(client, 20);
-        }
-    }
-
-    private void waitThenCreate(MinecraftClient client, int settleTicks) {
-        if (client.world != null) {
-            client.execute(() -> waitThenCreate(client, settleTicks));
-        } else if (settleTicks > 0) {
-            client.execute(() -> waitThenCreate(client, settleTicks - 1));
-        } else {
-            scanFuture.thenAccept(result -> client.execute(() ->
-                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result.seed)));
+            // TEMPORARY DEBUG STEP: only disconnect to the title screen, nothing else.
+            // Testing whether the "8x TPS, nothing happens" issue comes from this
+            // disconnect call itself, before re-adding the auto-create-and-join step.
+            client.disconnect(new TitleScreen());
         }
     }
 
