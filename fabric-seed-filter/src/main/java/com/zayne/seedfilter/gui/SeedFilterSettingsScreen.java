@@ -144,9 +144,4 @@ public class SeedFilterSettingsScreen extends Screen {
 
         super.render(matrices, mouseX, mouseY, delta);
     }
-
-    @Override
-    public boolean shouldPause() {
-        return false;
-    }
 }
