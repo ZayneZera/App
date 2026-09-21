@@ -88,7 +88,9 @@ static int check_bastion(Generator *gNether, uint64_t seed, int centerBlockX, in
     return 0;
 }
 
-int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out) {
+#define BUMP(field) do { if (stats) __sync_fetch_and_add(&stats->field, 1); } while (0)
+
+int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out, ScanStats *stats) {
     Generator gOverworld;
     setupGenerator(&gOverworld, MC, 0);
     applySeed(&gOverworld, DIM_OVERWORLD, seed);
@@ -97,21 +99,27 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out)
     int spawnChunkBlockX = spawn.x, spawnChunkBlockZ = spawn.z;
 
     if (cfg->villageEnabled) {
+        BUMP(reachedVillage);
         if (!find_structure_within(Village, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->villageMaxChunks, NULL)) {
             return 0;
         }
+        BUMP(passedVillage);
     }
 
     if (cfg->ruinedPortalEnabled) {
+        BUMP(reachedRuinedPortal);
         if (!find_structure_within(Ruined_Portal, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->ruinedPortalMaxChunks, NULL)) {
             return 0;
         }
+        BUMP(passedRuinedPortal);
     }
 
     if (cfg->buriedTreasureEnabled) {
+        BUMP(reachedTreasure);
         if (!find_structure_within(Treasure, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->buriedTreasureMaxChunks, NULL)) {
             return 0;
         }
+        BUMP(passedTreasure);
     }
 
     if (cfg->bastionEnabled || cfg->fortressEnabled) {
@@ -124,15 +132,19 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out)
         applySeed(&gNether, DIM_NETHER, seed);
 
         if (cfg->bastionEnabled) {
+            BUMP(reachedBastion);
             if (!check_bastion(&gNether, seed, netherX, netherZ, cfg)) {
                 return 0;
             }
+            BUMP(passedBastion);
         }
 
         if (cfg->fortressEnabled) {
+            BUMP(reachedFortress);
             if (!find_structure_within(Fortress, &gNether, seed, netherX, netherZ, cfg->fortressMaxNetherChunks, NULL)) {
                 return 0;
             }
+            BUMP(passedFortress);
         }
     }
 

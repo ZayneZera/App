@@ -36,9 +36,10 @@ public class SeedFilterMod implements ClientModInitializer {
         }
 
         AtomicReference<Process> processHolder = new AtomicReference<>();
-        client.openScreen(new ScanProgressScreen(titleScreen, processHolder));
+        EngineStats stats = new EngineStats();
+        client.openScreen(new ScanProgressScreen(titleScreen, processHolder, stats));
 
-        ExternalEngine.runAsync(processHolder).thenAccept(result ->
+        ExternalEngine.runAsync(processHolder, stats).thenAccept(result ->
                 client.execute(() -> createAndJoin(client, titleScreen, result))
         ).exceptionally(error -> {
             LOGGER.warn("Seed search did not produce a result", error);

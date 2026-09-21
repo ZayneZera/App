@@ -8,7 +8,7 @@
 typedef struct {
     const FilterConfig *cfg;
     FilterResult *out;
-    volatile long *attemptsCounter;
+    ScanStats *stats;
     volatile int *cancelFlag;
     atomic_int *foundFlag;
     unsigned int seedSeed;
@@ -30,12 +30,12 @@ static void *worker(void *argPtr) {
         xstate ^= xstate << 17;
         uint64_t seed = xstate;
 
-        if (args->attemptsCounter) {
-            __sync_fetch_and_add(args->attemptsCounter, 1);
+        if (args->stats) {
+            __sync_fetch_and_add(&args->stats->attempts, 1);
         }
 
         FilterResult result;
-        if (engine_check_seed(seed, args->cfg, &result)) {
+        if (engine_check_seed(seed, args->cfg, &result, args->stats)) {
             int expected = 0;
             if (atomic_compare_exchange_strong(args->foundFlag, &expected, 1)) {
                 *args->out = result;
@@ -46,7 +46,7 @@ static void *worker(void *argPtr) {
     return NULL;
 }
 
-int engine_search(const FilterConfig *cfg, FilterResult *out, volatile long *attemptsCounter, volatile int *cancelFlag) {
+int engine_search(const FilterConfig *cfg, FilterResult *out, ScanStats *stats, volatile int *cancelFlag) {
     int threadCount = cfg->threadCount > 0 ? cfg->threadCount : 6;
     pthread_t *threads = malloc(sizeof(pthread_t) * threadCount);
     WorkerArgs *args = malloc(sizeof(WorkerArgs) * threadCount);
@@ -55,7 +55,7 @@ int engine_search(const FilterConfig *cfg, FilterResult *out, volatile long *att
     for (int i = 0; i < threadCount; i++) {
         args[i].cfg = cfg;
         args[i].out = out;
-        args[i].attemptsCounter = attemptsCounter;
+        args[i].stats = stats;
         args[i].cancelFlag = cancelFlag;
         args[i].foundFlag = &foundFlag;
         args[i].seedSeed = (unsigned int) (i * 2654435761u + 1);

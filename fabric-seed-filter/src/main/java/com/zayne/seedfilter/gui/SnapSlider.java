@@ -76,23 +76,24 @@ public class SnapSlider extends SliderWidget {
     @Override
     public void renderButton(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         // Track background, matching the dark panel look instead of vanilla's grey button.
-        fill(matrices, this.x, this.y + this.height / 2 - 2, this.x + this.width, this.y + this.height / 2 + 2, 0xFF3A3936);
+        fill(matrices, this.x, this.y + this.height / 2 - 2, this.x + this.width, this.y + this.height / 2 + 2, 0xFF2B2B2B);
 
         // Tick marks at every snap step (only drawn if they wouldn't be pixel-mush - cap density).
         int steps = max - min;
         if (steps > 0 && steps <= 32) {
             for (int i = 0; i <= steps; i++) {
                 int tx = this.x + 4 + (int) ((this.width - 8) * (i / (double) steps));
-                fill(matrices, tx, this.y + this.height / 2 - 1, tx + 1, this.y + this.height / 2 + 1, 0x55D9D3C7);
+                fill(matrices, tx, this.y + this.height / 2 - 1, tx + 1, this.y + this.height / 2 + 1, 0x80757575);
             }
         }
 
         // Handle.
         int handleX = this.x + 4 + (int) ((this.width - 8) * this.value) - 3;
-        fill(matrices, handleX, this.y + 2, handleX + 6, this.y + this.height - 2, accentColor);
+        fill(matrices, handleX, this.y + 2, handleX + 6, this.y + this.height - 2, DarkTheme.BORDER);
+        fill(matrices, handleX + 1, this.y + 3, handleX + 5, this.y + this.height - 3, accentColor);
 
         RenderSystem.enableBlend();
         drawCenteredText(matrices, net.minecraft.client.MinecraftClient.getInstance().textRenderer,
-                this.getMessage(), this.x + this.width / 2, this.y + this.height + 1, 0xC9C4B8);
+                this.getMessage(), this.x + this.width / 2, this.y + this.height + 1, DarkTheme.TEXT_DIM);
     }
 }

@@ -12,9 +12,12 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /**
- * In-game settings menu (Ctrl+M), replacing the old external Win32 GUI window - writes the
- * same seedfilter.cfg the exe's headless search reads, styled as a dark, rounded-corner panel
- * instead of vanilla GUI widgets.
+ * In-game settings menu (Ctrl+M) - writes the same seedfilter.cfg the exe's headless search
+ * reads, styled as a dark, rounded-corner panel instead of vanilla GUI widgets. Deliberately
+ * does NOT render whatever screen was open underneath (title screen, pause menu, ...) - vanilla
+ * button text was bleeding through the panel when we tried that, since Minecraft's 2D GUI has
+ * no real depth buffer to rely on for draw order. The standard renderBackground() dim/blur is
+ * enough context on its own.
  */
 public class SeedFilterMenuScreen extends Screen {
 
@@ -28,9 +31,10 @@ public class SeedFilterMenuScreen extends Screen {
 
     private final List<Object[]> sectionLabels = new ArrayList<>();
     private final List<Object[]> checkboxLabels = new ArrayList<>();
+    private final List<Integer> dividerYs = new ArrayList<>();
 
     public SeedFilterMenuScreen(Screen background) {
-        super(new LiteralText("Seed-Filter"));
+        super(LiteralText.EMPTY);
         this.background = background;
         this.config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
     }
@@ -45,6 +49,7 @@ public class SeedFilterMenuScreen extends Screen {
         this.children.clear();
         sectionLabels.clear();
         checkboxLabels.clear();
+        dividerYs.clear();
 
         panelW = Math.min(360, this.width - 24);
         panelH = Math.min(this.height - 24, 460);
@@ -58,12 +63,15 @@ public class SeedFilterMenuScreen extends Screen {
         addSection("Ruined Portal", contentX, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
         addCheckboxRow(contentX, "Looting", config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.ruinedPortalMaxChunks, v -> config.ruinedPortalMaxChunks = v);
+        addDivider(contentX, contentW);
 
         addSection("Village", contentX, config.villageEnabled, v -> config.villageEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.villageMaxChunks, v -> config.villageMaxChunks = v);
+        addDivider(contentX, contentW);
 
         addSection("Buried Treasure", contentX, config.buriedTreasureEnabled, v -> config.buriedTreasureEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.buriedTreasureMaxChunks, v -> config.buriedTreasureMaxChunks = v);
+        addDivider(contentX, contentW);
 
         addSection("Bastion", contentX, config.bastionEnabled, v -> config.bastionEnabled = v);
         addCheckboxRow(contentX, "Bridge", config.bastionAllowBridge, v -> config.bastionAllowBridge = v);
@@ -71,11 +79,12 @@ public class SeedFilterMenuScreen extends Screen {
         addCheckboxRow(contentX, "Stables", config.bastionAllowStables, v -> config.bastionAllowStables = v);
         addCheckboxRow(contentX, "Treasure", config.bastionAllowTreasure, v -> config.bastionAllowTreasure = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.bastionMaxNetherChunks, v -> config.bastionMaxNetherChunks = v);
+        addDivider(contentX, contentW);
 
         addSection("Fortress", contentX, config.fortressEnabled, v -> config.fortressEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.fortressMaxNetherChunks, v -> config.fortressMaxNetherChunks = v);
+        addDivider(contentX, contentW);
 
-        nextY += 6;
         addCheckboxRow(contentX, "Cheats aktivieren", config.enableCheats, v -> config.enableCheats = v);
 
         contentHeight = (nextY - (panelY + 14 - scrollOffset)) + 10;
@@ -98,22 +107,27 @@ public class SeedFilterMenuScreen extends Screen {
         nextY += 26;
     }
 
+    private void addDivider(int x, int w) {
+        nextY += 4;
+        dividerYs.add(nextY);
+        nextY += 8;
+    }
+
     @Override
     public void render(MatrixStack matrices, int mouseX, int mouseY, float delta) {
         this.renderBackground(matrices);
-        if (background != null) {
-            background.render(matrices, -1, -1, delta);
-            fill(matrices, 0, 0, this.width, this.height, 0x66000000);
+
+        fillRounded(matrices, panelX, panelY, panelW, panelH, DarkTheme.PANEL, DarkTheme.BORDER);
+
+        for (int y : dividerYs) {
+            if (y < panelY || y > panelY + panelH - 10) continue;
+            fill(matrices, panelX + 12, y, panelX + panelW - 12, y + 1, DarkTheme.BORDER);
         }
-
-        fillRounded(matrices, panelX, panelY, panelW, panelH, DarkTheme.PANEL, DarkTheme.PANEL_BORDER);
-
-        drawCenteredText(matrices, this.textRenderer, this.title, this.width / 2, panelY - 14, DarkTheme.TEXT);
 
         for (Object[] entry : sectionLabels) {
             int y = (int) entry[2];
             if (y < panelY || y > panelY + panelH - 10) continue;
-            drawStringWithShadow(matrices, this.textRenderer, (String) entry[0], (int) entry[1], y, DarkTheme.TEXT);
+            drawStringWithShadow(matrices, this.textRenderer, (String) entry[0], (int) entry[1], y, DarkTheme.HEADING);
         }
         for (Object[] entry : checkboxLabels) {
             int y = (int) entry[2];
@@ -122,17 +136,16 @@ public class SeedFilterMenuScreen extends Screen {
         }
 
         super.render(matrices, mouseX, mouseY, delta);
-
-        drawCenteredText(matrices, this.textRenderer, new LiteralText("Strg+M zum Schließen"),
-                this.width / 2, panelY + panelH + 8, DarkTheme.TEXT_DIM);
     }
 
     private static void fillRounded(MatrixStack matrices, int x, int y, int w, int h, int fillColor, int borderColor) {
-        // 2px corner notches approximate rounding within this version's plain-rect renderer.
-        fill(matrices, x + 2, y, x + w - 2, y + h, borderColor);
-        fill(matrices, x, y + 2, x + w, y + h - 2, borderColor);
-        fill(matrices, x + 3, y + 1, x + w - 3, y + h - 1, fillColor);
-        fill(matrices, x + 1, y + 3, x + w - 1, y + h - 3, fillColor);
+        // Corner notches approximating rounding within this version's plain-rect renderer.
+        fill(matrices, x + 3, y, x + w - 3, y + h, borderColor);
+        fill(matrices, x, y + 3, x + w, y + h - 3, borderColor);
+        fill(matrices, x + 1, y + 1, x + w - 1, y + 2, borderColor);
+        fill(matrices, x + 1, y + h - 2, x + w - 1, y + h - 1, borderColor);
+        fill(matrices, x + 4, y + 1, x + w - 4, y + h - 1, fillColor);
+        fill(matrices, x + 1, y + 4, x + w - 1, y + h - 4, fillColor);
     }
 
     @Override

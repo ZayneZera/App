@@ -66,9 +66,10 @@ public class ExternalEngine {
     /**
      * Runs "seedfilter.exe --search <config>" on a background thread and completes the future
      * with the parsed result. The AtomicReference<Process> lets a caller cancel by destroying
-     * the process (see cancel()).
+     * the process (see cancel()). stats (may be null) is updated live as "Progress:" lines
+     * stream in, so a screen can poll it for a live funnel display.
      */
-    public static CompletableFuture<Result> runAsync(AtomicReference<Process> processHolder) {
+    public static CompletableFuture<Result> runAsync(AtomicReference<Process> processHolder, EngineStats stats) {
         CompletableFuture<Result> future = new CompletableFuture<>();
 
         Thread thread = new Thread(() -> {
@@ -96,6 +97,8 @@ public class ExternalEngine {
                             spawnZ = Integer.parseInt(line.substring("SpawnZ:".length()).trim());
                         } else if (line.startsWith("Cheats:")) {
                             cheats = line.substring("Cheats:".length()).trim().equals("1");
+                        } else if (line.startsWith("Progress:") && stats != null) {
+                            stats.applyProgressLine(line);
                         }
                     }
                 }

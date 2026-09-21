@@ -1,6 +1,8 @@
 package com.zayne.seedfilter.gui;
 
+import com.zayne.seedfilter.EngineStats;
 import com.zayne.seedfilter.ExternalEngine;
+import com.zayne.seedfilter.SeedFilterConfig;
 import com.zayne.seedfilter.SeedFilterMod;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
@@ -26,18 +28,20 @@ public class CountdownScreen extends Screen {
     private final long startTimeMillis;
     private final AtomicBoolean cancelled = new AtomicBoolean(false);
     private final AtomicReference<Process> processHolder = new AtomicReference<>();
+    private final EngineStats stats = new EngineStats();
+    private final SeedFilterConfig config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
     private final CompletableFuture<ExternalEngine.Result> scanFuture;
     private boolean triggered = false;
 
     public CountdownScreen() {
         super(new LiteralText("Nächster Seed"));
         this.startTimeMillis = System.currentTimeMillis();
-        this.scanFuture = ExternalEngine.runAsync(processHolder);
+        this.scanFuture = ExternalEngine.runAsync(processHolder, stats);
     }
 
     @Override
     protected void init() {
-        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 50, 150, 20,
+        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 90, 150, 20,
                 new LiteralText("Abbrechen"), button -> {
             cancelled.set(true);
             ExternalEngine.cancel(processHolder);
@@ -91,10 +95,37 @@ public class CountdownScreen extends Screen {
         drawCenteredText(matrices, this.textRenderer, new LiteralText(String.valueOf(remaining)), 0, 0, 0xFFFFFF);
         matrices.pop();
 
-        drawCenteredText(matrices, this.textRenderer, new LiteralText("Suche Seed im Hintergrund..."),
+        drawCenteredText(matrices, this.textRenderer, new LiteralText("Versuche: " + stats.attempts.get()),
                 this.width / 2, this.height / 2 + 10, 0xAAAAAA);
+        renderFunnel(matrices);
 
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    private void renderFunnel(MatrixStack matrices) {
+        int y = this.height / 2 + 25;
+        if (config.villageEnabled) {
+            y = drawFunnelLine(matrices, "Dorf", stats.passedVillage.get(), stats.reachedVillage.get(), y);
+        }
+        if (config.ruinedPortalEnabled) {
+            y = drawFunnelLine(matrices, "Ruined Portal", stats.passedRuinedPortal.get(), stats.reachedRuinedPortal.get(), y);
+        }
+        if (config.buriedTreasureEnabled) {
+            y = drawFunnelLine(matrices, "Buried Treasure", stats.passedTreasure.get(), stats.reachedTreasure.get(), y);
+        }
+        if (config.bastionEnabled) {
+            y = drawFunnelLine(matrices, "Bastion", stats.passedBastion.get(), stats.reachedBastion.get(), y);
+        }
+        if (config.fortressEnabled) {
+            drawFunnelLine(matrices, "Fortress", stats.passedFortress.get(), stats.reachedFortress.get(), y);
+        }
+    }
+
+    private int drawFunnelLine(MatrixStack matrices, String label, long passed, long reached, int y) {
+        String pct = reached > 0 ? String.format(" (%.1f%%)", 100.0 * passed / reached) : "";
+        drawCenteredText(matrices, this.textRenderer,
+                new LiteralText(label + ": " + passed + "/" + reached + pct), this.width / 2, y, 0x77AAFF);
+        return y + 10;
     }
 
     @Override
