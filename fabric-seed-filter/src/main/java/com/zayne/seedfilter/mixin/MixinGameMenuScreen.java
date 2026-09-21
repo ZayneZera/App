@@ -25,7 +25,7 @@ public abstract class MixinGameMenuScreen extends Screen {
         super(title);
     }
 
-    @Inject(method = "init", at = @At("TAIL"))
+    @Inject(method = "initWidgets", at = @At("TAIL"))
     private void seedFilter$init(CallbackInfo ci) {
         int buttonY;
         try {
