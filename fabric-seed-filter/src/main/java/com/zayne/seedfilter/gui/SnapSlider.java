@@ -8,10 +8,10 @@ import net.minecraft.text.LiteralText;
 import java.util.function.IntConsumer;
 
 /**
- * Integer slider: snaps to whole steps (setValueFromMouse rounds to the nearest of max-min
- * steps) and draws its own tick marks + accent-colored handle instead of the vanilla button
- * texture. Click-anywhere-to-jump comes from the base SliderWidget class already routing both
- * mouseClicked and mouseDragged through setValueFromMouse.
+ * Integer slider: snaps to whole steps and draws its own tick marks + accent-colored handle
+ * instead of the vanilla button texture. Click-anywhere-to-jump and drag both go through
+ * mouseClicked/mouseDragged (the stable public Element methods) rather than SliderWidget's own
+ * internal value-from-mouse hook, which isn't overridable in this Minecraft version.
  */
 public class SnapSlider extends SliderWidget {
     private final int min;
@@ -49,14 +49,28 @@ public class SnapSlider extends SliderWidget {
         onChange.accept(getIntValue());
     }
 
-    @Override
-    protected void setValueFromMouse(double mouseX) {
+    private void applySnappedValue(double mouseX) {
         double raw = (mouseX - (this.x + 4)) / (double) (this.width - 8);
         int steps = max - min;
         double snapped = steps <= 0 ? raw : Math.round(raw * steps) / (double) steps;
         this.value = Math.max(0.0, Math.min(1.0, snapped));
         updateMessage();
         applyValue();
+    }
+
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (this.active && this.visible && this.isMouseOver(mouseX, mouseY)) {
+            applySnappedValue(mouseX);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+        applySnappedValue(mouseX);
+        return true;
     }
 
     @Override
