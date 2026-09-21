@@ -3,6 +3,7 @@ package com.zayne.seedfilter.scan;
 import com.zayne.seedfilter.FilterConfig;
 import net.minecraft.world.biome.Biome;
 import net.minecraft.world.biome.source.VanillaLayeredBiomeSource;
+import net.minecraft.world.gen.feature.StructureFeature;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -16,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SeedScanner {
 
     private static final Logger LOGGER = LogManager.getLogger("seed-filter");
-    private static final AtomicInteger DEBUG_LOG_BUDGET = new AtomicInteger(10);
 
     public static final int WORKER_THREADS = 6;
 
@@ -31,12 +31,10 @@ public class SeedScanner {
     /**
      * Scans random seeds across multiple background threads (pure math + headless biome
      * sampling, no game world involved) and completes as soon as one matches.
-     * NOTE: only checks the Village criterion so far - the other criteria are not implemented yet.
+     * Checks: Village, Ruined Portal, Buried Treasure (position + biome).
+     * NOT checked yet: Bastion, Fortress (need a Nether biome source), chest loot contents.
      */
     public static CompletableFuture<Result> scanAsync(FilterConfig config, AtomicInteger attemptsCounter, AtomicBoolean cancelled) {
-        LOGGER.info("seed-filter: StructureFeatures.VILLAGE resolved to: {}", StructureFeatures.VILLAGE);
-        LOGGER.info("seed-filter: STRUCTURES map keys: {}", net.minecraft.world.gen.feature.StructureFeature.STRUCTURES.keySet());
-
         ExecutorService executor = Executors.newFixedThreadPool(WORKER_THREADS);
         CompletableFuture<Result> future = new CompletableFuture<>();
 
@@ -64,35 +62,47 @@ public class SeedScanner {
         int spawnChunkX = spawn[0] >> 4;
         int spawnChunkZ = spawn[1] >> 4;
 
-        boolean debugLog = DEBUG_LOG_BUDGET.getAndDecrement() > 0;
+        if (config.villageEnabled && !checkGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
+                StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
+            return false;
+        }
 
-        if (config.villageEnabled) {
-            StructurePlacement.Candidate village = StructurePlacement.nearestGridCandidate(
-                    seed, StructureConfig.VILLAGE, spawnChunkX, spawnChunkZ);
+        if (config.ruinedPortalEnabled && !checkGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
+                StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
+            return false;
+        }
 
-            if (village == null || village.chunkDistance > config.villageMaxChunks) {
-                if (debugLog) {
-                    LOGGER.info("seed-filter seed={} spawnChunk=({},{}) villageDist={} (max {}) -> DISTANCE FAIL",
-                            seed, spawnChunkX, spawnChunkZ, village == null ? "null" : village.chunkDistance, config.villageMaxChunks);
-                }
-                return false;
-            }
-
-            int villageBlockX = village.chunkX * 16 + 8;
-            int villageBlockZ = village.chunkZ * 16 + 8;
-            Biome villageBiome = HeadlessBiomeSource.biomeAt(overworldBiomes, villageBlockX, villageBlockZ);
-            boolean validBiome = StructureFeatures.VILLAGE != null && villageBiome.hasStructureFeature(StructureFeatures.VILLAGE);
-
-            if (debugLog) {
-                LOGGER.info("seed-filter seed={} spawnChunk=({},{}) villageChunk=({},{}) dist={} biome={} validBiome={}",
-                        seed, spawnChunkX, spawnChunkZ, village.chunkX, village.chunkZ, village.chunkDistance, villageBiome, validBiome);
-            }
-
-            if (!validBiome) {
-                return false;
-            }
+        if (config.buriedTreasureEnabled && !checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
+            return false;
         }
 
         return true;
+    }
+
+    private static boolean checkGridStructure(long seed, VanillaLayeredBiomeSource biomes, StructureConfig placement,
+                                               StructureFeature<?> feature, int spawnChunkX, int spawnChunkZ, int maxChunks) {
+        StructurePlacement.Candidate candidate = StructurePlacement.nearestGridCandidate(seed, placement, spawnChunkX, spawnChunkZ);
+        if (candidate == null || candidate.chunkDistance > maxChunks) {
+            return false;
+        }
+        return isValidBiome(biomes, feature, candidate.chunkX, candidate.chunkZ);
+    }
+
+    private static boolean checkTreasure(long seed, VanillaLayeredBiomeSource biomes, int spawnChunkX, int spawnChunkZ, int maxChunks) {
+        StructurePlacement.Candidate candidate = StructurePlacement.nearestTreasureChunk(seed, spawnChunkX, spawnChunkZ, maxChunks);
+        if (candidate == null) {
+            return false;
+        }
+        return isValidBiome(biomes, StructureFeatures.BURIED_TREASURE, candidate.chunkX, candidate.chunkZ);
+    }
+
+    private static boolean isValidBiome(VanillaLayeredBiomeSource biomes, StructureFeature<?> feature, int chunkX, int chunkZ) {
+        if (feature == null) {
+            return false;
+        }
+        int blockX = chunkX * 16 + 8;
+        int blockZ = chunkZ * 16 + 8;
+        Biome biome = HeadlessBiomeSource.biomeAt(biomes, blockX, blockZ);
+        return biome.hasStructureFeature(feature);
     }
 }
