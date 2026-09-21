@@ -18,6 +18,9 @@ public class StructureConfig {
     public static final StructureConfig VILLAGE = new StructureConfig(10387312, 32, 24);
     public static final StructureConfig RUINED_PORTAL = new StructureConfig(34222645, 40, 25);
     public static final StructureConfig BURIED_TREASURE = new StructureConfig(10387320, 1, 1);
-    public static final StructureConfig BASTION = new StructureConfig(30084232, 27, 23);
-    public static final StructureConfig FORTRESS = new StructureConfig(30084232, 27, 23);
+
+    // Bastion and Fortress deliberately share this same grid (salt 30084232, 27/23) so they
+    // never overlap - which one actually wins a given slot needs an extra RNG draw beyond
+    // just salt/spacing/separation, so they're handled separately in NetherStructurePlacement
+    // rather than as plain StructureConfig instances here.
 }

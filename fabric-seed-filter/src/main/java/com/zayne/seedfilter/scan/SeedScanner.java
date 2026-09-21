@@ -95,8 +95,7 @@ public class SeedScanner {
                 return null;
             }
 
-            if (config.fortressEnabled && !checkNetherGridStructure(seed, netherBiomes, StructureConfig.FORTRESS,
-                    StructureFeatures.FORTRESS, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
+            if (config.fortressEnabled && !checkFortress(seed, netherBiomes, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
                 return null;
             }
         }
@@ -116,32 +115,21 @@ public class SeedScanner {
         return feature != null && biome.hasStructureFeature(feature);
     }
 
-    private static boolean checkNetherGridStructure(long seed, MultiNoiseBiomeSource biomes, StructureConfig placement,
-                                                      StructureFeature<?> feature, int centerChunkX, int centerChunkZ, int maxChunks) {
-        StructurePlacement.Candidate candidate = StructurePlacement.nearestGridCandidate(seed, placement, centerChunkX, centerChunkZ);
-        if (candidate == null || candidate.chunkDistance > maxChunks) {
-            return false;
-        }
-        int blockX = candidate.chunkX * 16 + 8;
-        int blockZ = candidate.chunkZ * 16 + 8;
-        Biome biome = HeadlessNetherBiomeSource.biomeAt(biomes, blockX, blockZ);
-        return feature != null && biome.hasStructureFeature(feature);
-    }
-
     private static boolean checkBastion(long seed, MultiNoiseBiomeSource biomes, int centerChunkX, int centerChunkZ, FilterConfig config) {
-        StructurePlacement.Candidate candidate = StructurePlacement.nearestGridCandidate(seed, StructureConfig.BASTION, centerChunkX, centerChunkZ);
-        if (candidate == null || candidate.chunkDistance > config.bastionMaxNetherChunks) {
+        NetherStructurePlacement.Hit hit = NetherStructurePlacement.findNearest(
+                seed, NetherStructurePlacement.Type.BASTION, centerChunkX, centerChunkZ, biomes);
+        if (hit == null || hit.chunkDistance > config.bastionMaxNetherChunks) {
             return false;
         }
-        int blockX = candidate.chunkX * 16 + 8;
-        int blockZ = candidate.chunkZ * 16 + 8;
-        Biome biome = HeadlessNetherBiomeSource.biomeAt(biomes, blockX, blockZ);
-        if (!biome.hasStructureFeature(StructureFeatures.BASTION_REMNANT)) {
-            return false;
-        }
-        BastionTypeFinder.Type type = BastionTypeFinder.findType(seed, candidate.chunkX, candidate.chunkZ);
+        BastionTypeFinder.Type type = BastionTypeFinder.findType(seed, hit.chunkX, hit.chunkZ);
         return BastionTypeFinder.isAllowed(type, config.bastionAllowHousing, config.bastionAllowStables,
                 config.bastionAllowTreasure, config.bastionAllowBridge);
+    }
+
+    private static boolean checkFortress(long seed, MultiNoiseBiomeSource biomes, int centerChunkX, int centerChunkZ, int maxChunks) {
+        NetherStructurePlacement.Hit hit = NetherStructurePlacement.findNearest(
+                seed, NetherStructurePlacement.Type.FORTRESS, centerChunkX, centerChunkZ, biomes);
+        return hit != null && hit.chunkDistance <= maxChunks;
     }
 
     private static boolean checkTreasure(long seed, VanillaLayeredBiomeSource biomes, int spawnChunkX, int spawnChunkZ, int maxChunks) {
