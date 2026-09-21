@@ -36,7 +36,7 @@ public abstract class MixinTitleScreen extends Screen {
         int multiplayerRowY = singleplayerRowY + 24;
 
         this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS, button ->
-                SeedFilterMod.quickCreateWorld(MinecraftClient.getInstance(), (Screen) (Object) this)));
+                SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this)));
 
         this.addButton(new IconButton(x, multiplayerRowY, size, Items.GLISTERING_MELON_SLICE, button ->
                 MinecraftClient.getInstance().openScreen(new SeedFilterSettingsScreen((Screen) (Object) this))));
