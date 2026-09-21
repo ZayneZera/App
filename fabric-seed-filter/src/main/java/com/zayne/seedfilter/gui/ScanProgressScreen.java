@@ -56,7 +56,10 @@ public class ScanProgressScreen extends Screen {
         int x = this.width / 2 - barW / 2;
         double expectedAttempts = ProbabilityEstimator.expectedAttempts(config, stats);
         double pct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
-        int filled = (int) (barW * pct / 100.0);
+        // Inner fillable area is only barW - 2 wide (1px border on each side), so the fill must
+        // be capped to that, not to barW itself - at 100% "filled = barW" pushed 1px past the
+        // right border.
+        int filled = Math.min(barW - 2, (int) (barW * pct / 100.0));
 
         fill(matrices, x, y, x + barW, y + barH, DarkTheme.WIDGET_BORDER);
         fill(matrices, x + 1, y + 1, x + barW - 1, y + barH - 1, DarkTheme.WIDGET_BG);
