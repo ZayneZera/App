@@ -19,6 +19,7 @@ public class ScanProgressScreen extends Screen {
     private final SeedFilterConfig config;
     private double maxPctSeen = 0.0;
     private final SmoothedValue smoothedPct = new SmoothedValue();
+    private final EmaSmoother smoothedExpectedAttempts = new EmaSmoother(2.5);
 
     public ScanProgressScreen(Screen parent, AtomicReference<Process> processHolder, EngineStats stats) {
         super(new LiteralText("Suche passende Seed..."));
@@ -61,7 +62,8 @@ public class ScanProgressScreen extends Screen {
     private void renderProgressBar(MatrixStack matrices, int y) {
         int barW = 300, barH = 10;
         int x = this.width / 2 - barW / 2;
-        double expectedAttempts = ProbabilityEstimator.expectedAttemptsForDisplay(config, stats);
+        double liveExpectedAttempts = ProbabilityEstimator.expectedAttemptsForDisplay(config, stats);
+        double expectedAttempts = smoothedExpectedAttempts.update(liveExpectedAttempts);
         double rawPct = Math.min(100.0, 100.0 * stats.attempts.get() / expectedAttempts);
         maxPctSeen = Math.max(maxPctSeen, rawPct);
         double pct = smoothedPct.update(maxPctSeen);
