@@ -65,7 +65,19 @@ public class CountdownScreen extends Screen {
                     client.world.disconnect();
                 }
                 client.disconnect(new TitleScreen());
+                waitThenCreate(client, 3);
             });
+        }
+    }
+
+    private void waitThenCreate(MinecraftClient client, int settleTicks) {
+        if (client.world != null) {
+            client.execute(() -> waitThenCreate(client, settleTicks));
+        } else if (settleTicks > 0) {
+            client.execute(() -> waitThenCreate(client, settleTicks - 1));
+        } else {
+            scanFuture.thenAccept(result -> client.execute(() ->
+                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result.seed)));
         }
     }
 
