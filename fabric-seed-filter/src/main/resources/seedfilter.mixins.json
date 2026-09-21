@@ -4,6 +4,7 @@
   "package": "com.zayne.seedfilter.mixin",
   "compatibilityLevel": "JAVA_8",
   "client": [
+    "CreateWorldScreenAccessor",
     "MixinTitleScreen"
   ],
   "injectors": {
