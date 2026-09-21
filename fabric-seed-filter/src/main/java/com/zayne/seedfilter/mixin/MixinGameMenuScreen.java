@@ -14,9 +14,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Confirmed-working pattern (matches known-good examples): mixin directly into
- * GameMenuScreen, extending Screen for access to addButton/width/height. Fixed position,
- * no dynamic lookup - that repeatedly broke visibility in earlier attempts.
+ * Confirmed-working pattern: mixin directly into GameMenuScreen, extending Screen for
+ * access to addButton/width/height. Fixed position (dynamic lookup broke visibility
+ * repeatedly). Click handling waits for disconnect by re-queuing itself on the client
+ * thread via MinecraftClient.execute() instead of a background Thread - reading
+ * client.world from an unsynchronized background thread risked never observing the
+ * update (classic cross-thread visibility bug), and a plain non-daemon Thread stuck in
+ * that loop also prevented the JVM from exiting when the game was closed.
  */
 @Mixin(GameMenuScreen.class)
 public abstract class MixinGameMenuScreen extends Screen {
@@ -34,20 +38,17 @@ public abstract class MixinGameMenuScreen extends Screen {
             MinecraftClient client = MinecraftClient.getInstance();
             TitleScreen title = new TitleScreen();
             client.disconnect(title);
-
-            new Thread(() -> {
-                while (client.world != null) {
-                    try {
-                        Thread.sleep(20);
-                    } catch (InterruptedException ignored) {
-                    }
-                }
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException ignored) {
-                }
-                client.execute(() -> SeedFilterMod.startScanAndCreate(client, new TitleScreen()));
-            }, "seed-filter-disconnect-wait").start();
+            waitForDisconnect(client, 10);
         }));
+    }
+
+    private static void waitForDisconnect(MinecraftClient client, int settleTicks) {
+        if (client.world != null) {
+            client.execute(() -> waitForDisconnect(client, settleTicks));
+        } else if (settleTicks > 0) {
+            client.execute(() -> waitForDisconnect(client, settleTicks - 1));
+        } else {
+            SeedFilterMod.startScanAndCreate(client, new TitleScreen());
+        }
     }
 }
