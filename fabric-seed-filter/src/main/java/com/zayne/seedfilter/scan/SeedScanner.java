@@ -55,6 +55,8 @@ public class SeedScanner {
                     attemptsCounter.incrementAndGet();
                     int[] spawn = matches(seed, config, stats);
                     if (spawn != null) {
+                        // matches() already re-verified against the exact spawn before
+                        // returning non-null, so `spawn` here IS the exact one.
                         future.complete(new Result(seed, spawn[0], spawn[1]));
                         return;
                     }
@@ -67,12 +69,35 @@ public class SeedScanner {
     }
 
     /**
-     * Returns the computed [spawnX, spawnZ] on a match, or null if the seed doesn't qualify.
-     * stats may be null (no funnel tracking needed).
+     * Returns the computed exact [spawnX, spawnZ] on a match, or null if the seed doesn't
+     * qualify. stats may be null (no funnel tracking needed).
+     *
+     * Two-pass: the exact spawn search (findRealOverworldSpawn) scans a 129x129 biome grid -
+     * expensive, and pointless to pay for on the ~98%+ of candidates that fail Buried Treasure
+     * or another cheap criterion anyway. So we first sieve using a cheap approximate spawn
+     * (findApproxOverworldSpawn, stops at the first valid biome). Only a seed that ALREADY
+     * passes every criterion against the approximation gets the expensive exact spawn search
+     * and a full re-check against it - since approx and exact can differ enough to flip a tight
+     * distance check, the final accept/reject decision always comes from the exact pass, never
+     * the sieve. Funnel stats are only recorded on that final, accurate pass.
      */
     private static int[] matches(long seed, FilterConfig config, ScanStats stats) {
         VanillaLayeredBiomeSource overworldBiomes = HeadlessBiomeSource.create(seed);
-        int[] spawn = SpawnFinder.findRealOverworldSpawn(seed, overworldBiomes);
+
+        int[] approxSpawn = SpawnFinder.findApproxOverworldSpawn(overworldBiomes);
+        if (!checkAllCriteria(seed, config, overworldBiomes, approxSpawn, null)) {
+            return null;
+        }
+
+        int[] exactSpawn = SpawnFinder.findRealOverworldSpawn(seed, overworldBiomes);
+        if (!checkAllCriteria(seed, config, overworldBiomes, exactSpawn, stats)) {
+            return null;
+        }
+        return exactSpawn;
+    }
+
+    private static boolean checkAllCriteria(long seed, FilterConfig config, VanillaLayeredBiomeSource overworldBiomes,
+                                             int[] spawn, ScanStats stats) {
         int spawnChunkX = spawn[0] >> 4;
         int spawnChunkZ = spawn[1] >> 4;
 
@@ -80,7 +105,7 @@ public class SeedScanner {
             if (stats != null) stats.reachedVillage.incrementAndGet();
             if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.VILLAGE,
                     StructureFeatures.VILLAGE, spawnChunkX, spawnChunkZ, config.villageMaxChunks)) {
-                return null;
+                return false;
             }
             if (stats != null) stats.passedVillage.incrementAndGet();
         }
@@ -89,7 +114,7 @@ public class SeedScanner {
             if (stats != null) stats.reachedRuinedPortal.incrementAndGet();
             if (!checkOverworldGridStructure(seed, overworldBiomes, StructureConfig.RUINED_PORTAL,
                     StructureFeatures.RUINED_PORTAL, spawnChunkX, spawnChunkZ, config.ruinedPortalMaxChunks)) {
-                return null;
+                return false;
             }
             if (stats != null) stats.passedRuinedPortal.incrementAndGet();
         }
@@ -97,7 +122,7 @@ public class SeedScanner {
         if (config.buriedTreasureEnabled) {
             if (stats != null) stats.reachedTreasure.incrementAndGet();
             if (!checkTreasure(seed, overworldBiomes, spawnChunkX, spawnChunkZ, config.buriedTreasureMaxChunks)) {
-                return null;
+                return false;
             }
             if (stats != null) stats.passedTreasure.incrementAndGet();
         }
@@ -111,7 +136,7 @@ public class SeedScanner {
             if (config.bastionEnabled) {
                 if (stats != null) stats.reachedBastion.incrementAndGet();
                 if (!checkBastion(seed, netherBiomes, netherChunkX, netherChunkZ, config)) {
-                    return null;
+                    return false;
                 }
                 if (stats != null) stats.passedBastion.incrementAndGet();
             }
@@ -119,13 +144,13 @@ public class SeedScanner {
             if (config.fortressEnabled) {
                 if (stats != null) stats.reachedFortress.incrementAndGet();
                 if (!checkFortress(seed, netherBiomes, netherChunkX, netherChunkZ, config.fortressMaxNetherChunks)) {
-                    return null;
+                    return false;
                 }
                 if (stats != null) stats.passedFortress.incrementAndGet();
             }
         }
 
-        return spawn;
+        return true;
     }
 
     private static boolean checkOverworldGridStructure(long seed, VanillaLayeredBiomeSource biomes, StructureConfig placement,
