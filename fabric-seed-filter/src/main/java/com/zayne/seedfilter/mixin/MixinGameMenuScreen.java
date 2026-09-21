@@ -5,6 +5,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.GameMenuScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
@@ -22,12 +23,32 @@ public abstract class MixinGameMenuScreen extends Screen {
 
     @Inject(method = "init", at = @At("TAIL"))
     private void seedFilter$init(CallbackInfo ci) {
-        this.addButton(new ButtonWidget(this.width - 210, this.height - 30, 200, 20,
+        int lowestY = 0;
+        for (Object child : this.children()) {
+            if (child instanceof AbstractButtonWidget) {
+                int y = ((AbstractButtonWidgetAccessor) child).getY();
+                if (y > lowestY) {
+                    lowestY = y;
+                }
+            }
+        }
+
+        int buttonY = lowestY + 24;
+        this.addButton(new ButtonWidget(this.width / 2 - 100, buttonY, 200, 20,
                 new LiteralText("Nächster Seed"), button -> {
             MinecraftClient client = MinecraftClient.getInstance();
             TitleScreen title = new TitleScreen();
             client.disconnect(title);
-            SeedFilterMod.startScanAndCreate(client, title);
+
+            new Thread(() -> {
+                while (client.world != null) {
+                    try {
+                        Thread.sleep(20);
+                    } catch (InterruptedException ignored) {
+                    }
+                }
+                client.execute(() -> SeedFilterMod.startScanAndCreate(client, title));
+            }, "seed-filter-disconnect-wait").start();
         }));
     }
 }
