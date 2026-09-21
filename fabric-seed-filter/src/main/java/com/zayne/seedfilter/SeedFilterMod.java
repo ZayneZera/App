@@ -35,7 +35,7 @@ public class SeedFilterMod implements ClientModInitializer {
         });
     }
 
-    private static void createAndJoin(MinecraftClient client, Screen titleScreen, long seed) {
+    public static void createAndJoin(MinecraftClient client, Screen titleScreen, long seed) {
         CreateWorldScreen screen = new CreateWorldScreen(titleScreen);
         client.openScreen(screen);
 
