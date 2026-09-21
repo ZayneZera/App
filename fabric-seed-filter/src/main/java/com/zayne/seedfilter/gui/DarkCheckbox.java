@@ -38,7 +38,7 @@ public class DarkCheckbox extends ButtonWidget {
         if (checked) {
             // checkmark.png isn't perfectly centered within its own 24x24 canvas (more
             // padding top/right than bottom/left), so nudge the draw position to compensate.
-            int size = this.height + 2;
+            int size = this.height;
             int dx = this.x + this.width / 2 - size / 2 + 1;
             int dy = this.y + this.height / 2 - size / 2 - 1;
 

@@ -90,25 +90,25 @@ public class SeedFilterMenuScreen extends Screen {
     }
 
     private void addSection(String name, int x, int w, boolean initial, Consumer<Boolean> setter) {
-        this.addButton(new SectionToggleButton(x, nextY, w, 18, name, initial, setter));
-        nextY += 24;
+        this.addButton(new SectionToggleButton(x, nextY, w, 16, name, initial, setter));
+        nextY += 20;
     }
 
     private void addCheckboxRow(int x, String label, boolean initial, Consumer<Boolean> setter) {
         this.addButton(new DarkCheckbox(x + 4, nextY, 10, initial, DarkTheme.ACCENT, setter));
         checkboxLabels.add(new Object[]{label, x + 20, nextY + 1});
-        nextY += 17;
+        nextY += 15;
     }
 
     private void addSliderRow(int x, int w, String label, int min, int max, int value, IntConsumer setter) {
         this.addButton(new SnapSlider(x, nextY, w, 12, label, min, max, value, DarkTheme.ACCENT, setter));
-        nextY += 26;
+        nextY += 23;
     }
 
     private void addDivider(int x, int w) {
-        nextY += 4;
+        nextY += 3;
         dividerYs.add(nextY);
-        nextY += 8;
+        nextY += 6;
     }
 
     @Override
