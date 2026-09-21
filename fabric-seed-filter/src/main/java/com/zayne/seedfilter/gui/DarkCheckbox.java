@@ -36,9 +36,11 @@ public class DarkCheckbox extends ButtonWidget {
         fill(matrices, this.x, this.y, this.x + this.width, this.y + this.height, DarkTheme.WIDGET_BORDER);
         fill(matrices, this.x + 1, this.y + 1, this.x + this.width - 1, this.y + this.height - 1, DarkTheme.WIDGET_BG);
         if (checked) {
-            int size = this.height + 6;
-            int dx = this.x + this.width / 2 - size / 2;
-            int dy = this.y + this.height / 2 - size / 2;
+            // checkmark.png isn't perfectly centered within its own 24x24 canvas (more
+            // padding top/right than bottom/left), so nudge the draw position to compensate.
+            int size = this.height + 2;
+            int dx = this.x + this.width / 2 - size / 2 + 1;
+            int dy = this.y + this.height / 2 - size / 2 - 1;
 
             RenderSystem.enableBlend();
             RenderSystem.defaultBlendFunc();
