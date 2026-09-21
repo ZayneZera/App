@@ -149,6 +149,13 @@ public class SeedFilterSettingsScreen extends Screen {
             drawStringWithShadow(matrices, this.textRenderer, rowLabelTexts.get(i), pos[0], pos[1], 0xFFFFFF);
         }
 
+        // TextFieldWidgets are only registered via addChild() (for input), which does not
+        // draw them - unlike ButtonWidgets added via addButton(), they need an explicit
+        // render() call or they're invisible (clickable but never drawn).
+        for (TextFieldWidget field : intFields) {
+            field.render(matrices, mouseX, mouseY, delta);
+        }
+
         super.render(matrices, mouseX, mouseY, delta);
     }
 
