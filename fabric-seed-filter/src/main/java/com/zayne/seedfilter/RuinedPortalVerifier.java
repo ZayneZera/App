@@ -12,8 +12,6 @@ import net.minecraft.world.World;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Arrays;
-
 /**
  * Does the Ruined Portal frame-completability check for real, once the mod has actually
  * teleported the player into the found seed - instead of trying to predict the portal's exact
@@ -70,23 +68,31 @@ public final class RuinedPortalVerifier {
             int portalX = result.rpPortalX;
             int portalZ = result.rpPortalZ;
 
-            // Force-generate/load every chunk the frame or the corner-height sample touches
-            // before reading anything from them.
-            int[] cornerLocalX = {0, template.sizeX - 1, 0, template.sizeX - 1};
-            int[] cornerLocalZ = {0, 0, template.sizeZ - 1, template.sizeZ - 1};
-            int[] cornerHeights = new int[4];
-            for (int i = 0; i < 4; i++) {
-                BlockPos t = RuinedPortalTemplates.transformAround(cornerLocalX[i], 0, cornerLocalZ[i], result.rpMirror, result.rpRotation, pivotX, pivotZ);
-                int wx = t.getX() + portalX;
-                int wz = t.getZ() + portalZ;
-                cornerHeights[i] = world.getChunk(wx >> 4, wz >> 4).sampleHeightmap(Heightmap.Type.WORLD_SURFACE_WG, wx & 15, wz & 15) - 1;
+            // Heightmap.Type.WORLD_SURFACE_WG (what vanilla actually used to place this portal)
+            // is a WORLDGEN-purpose heightmap that only exists on a ProtoChunk during
+            // generation - by the time we get here (world fully generated, player already
+            // spawned), that heightmap is gone and sampling it NPEs. Instead of approximating
+            // the placement height, locate the chest directly - its local position (and
+            // therefore world X/Z) is already known exactly, only its Y (== the placement
+            // origin's n) isn't, so scan a generous Y range for it there.
+            BlockPos chestT = RuinedPortalTemplates.transformAround(template.chestLocal.getX(), template.chestLocal.getY(), template.chestLocal.getZ(), result.rpMirror, result.rpRotation, pivotX, pivotZ);
+            int chestWorldX = chestT.getX() + portalX;
+            int chestWorldZ = chestT.getZ() + portalZ;
+            world.getChunk(chestWorldX >> 4, chestWorldZ >> 4);
+            int roughSurfaceY = world.getChunk(chestWorldX >> 4, chestWorldZ >> 4)
+                    .sampleHeightmap(Heightmap.Type.WORLD_SURFACE, chestWorldX & 15, chestWorldZ & 15);
+
+            Integer n = null;
+            for (int y = Math.min(255, roughSurfaceY + 20); y >= 1; y--) {
+                if (world.getBlockState(new BlockPos(chestWorldX, y, chestWorldZ)).isOf(Blocks.CHEST)) {
+                    n = y - template.chestLocal.getY();
+                    break;
+                }
             }
-            // 3rd-highest (2nd-lowest) of the 4 corners - same order statistic as vanilla's
-            // "at least 3 of 4 corners have solid ground" scan, now off exact heightmap data
-            // instead of an approximation.
-            Arrays.sort(cornerHeights);
-            int n = cornerHeights[1];
-            if (n < 15) n = 15;
+            if (n == null) {
+                sendErrorMessage(client, "Chest nicht gefunden bei (" + chestWorldX + ",?," + chestWorldZ + ")");
+                return;
+            }
 
             boolean cryingFound = false;
             int airCount = 0;
