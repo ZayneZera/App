@@ -22,7 +22,9 @@ import java.util.List;
  * matched-categories) combination. Left-click a row: joins the oldest unused seed in that stack
  * and marks it used. Right-click a row: switches to that stack's history (its used seeds) instead
  * of joining anything - a pure view, matching how the user asked for this ("nicht linksklicke
- * sondern rechtsklicke... komme ich auf die Historie").
+ * sondern rechtsklicke... komme ich auf die Historie"). Middle-click a row: clears the whole stack
+ * at once, moving every unused entry straight into its history without joining any of them
+ * (SeedBank.clearStack) - "bestimte katigorieren leeren und alle in verlauf verschieben".
  */
 public class SeedBankBrowseScreen extends Screen {
 
@@ -101,7 +103,7 @@ public class SeedBankBrowseScreen extends Screen {
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (button == 0 || button == 1) {
+        if (button == 0 || button == 1 || button == 2) {
             for (Row row : rows) {
                 if (mouseY < row.y || mouseY >= row.y + 16 || mouseX < this.width / 2 - 160 || mouseX > this.width / 2 + 160) {
                     continue;
@@ -110,6 +112,11 @@ public class SeedBankBrowseScreen extends Screen {
                     if (button == 1) {
                         historyView = row.stack;
                         this.init(this.client, this.width, this.height);
+                    } else if (button == 2) {
+                        if (!row.stack.unused.isEmpty()) {
+                            bank.clearStack(row.stack);
+                            this.init(this.client, this.width, this.height);
+                        }
                     } else if (!row.stack.unused.isEmpty()) {
                         joinFromStack(row.stack);
                     }
@@ -164,7 +171,7 @@ public class SeedBankBrowseScreen extends Screen {
 
         if (historyView == null && !rows.isEmpty()) {
             drawCenteredText(matrices, this.textRenderer,
-                    new LiteralText("Linksklick: laden  |  Rechtsklick: Historie"),
+                    new LiteralText("Linksklick: laden  |  Rechtsklick: Historie  |  Mittelklick: leeren"),
                     this.width / 2, this.height - 52, DarkTheme.TEXT_DIM);
         }
 

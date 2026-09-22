@@ -74,6 +74,15 @@ public class SeedBank {
         save();
     }
 
+    /** Moves every currently-unused entry in a stack into its history (used) list at once,
+     * without joining any of them - "leeren"/clear a category down to nothing outstanding. */
+    public void clearStack(Stack stack) {
+        for (SeedBankEntry entry : stack.unused) {
+            entry.used = true;
+        }
+        save();
+    }
+
     /** Canonical snapshot of the enabled categories' settings - the stacking/stats key.
      * Deliberately excludes cheats/creative/threadCount/orMode, none of which affect which seeds
      * match, so two searches differing only in those still stack together. */
