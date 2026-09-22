@@ -1,6 +1,7 @@
 package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.ExternalEngine;
+import com.zayne.seedfilter.MenuNav;
 import com.zayne.seedfilter.SeedFilterConfig;
 import com.zayne.seedfilter.mixin.AbstractButtonWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
@@ -191,6 +192,16 @@ public class SeedFilterMenuScreen extends Screen {
     private static void fillRounded(MatrixStack matrices, int x, int y, int w, int h, int fillColor, int borderColor) {
         fill(matrices, x, y, x + w, y + h, borderColor);
         fill(matrices, x + 1, y + 1, x + w - 1, y + h - 1, fillColor);
+    }
+
+    /** MB5 (back)/MB4 (forward) - see MenuNav. Falls back to this screen's own close action
+     * (same as Escape/the implicit Ctrl+M toggle) when there's nothing to go back to. */
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (MenuNav.handleNavClick(this.client, button, () -> MenuNav.navigate(this.client, background))) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override

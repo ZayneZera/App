@@ -36,9 +36,9 @@ public class MenuHotkey {
     private static void toggle(MinecraftClient client) {
         Screen current = client.currentScreen;
         if (current instanceof SeedFilterMenuScreen) {
-            client.openScreen(((SeedFilterMenuScreen) current).getBackgroundScreen());
+            MenuNav.navigate(client, ((SeedFilterMenuScreen) current).getBackgroundScreen());
         } else {
-            client.openScreen(new SeedFilterMenuScreen(current));
+            MenuNav.navigate(client, new SeedFilterMenuScreen(current));
         }
     }
 }
