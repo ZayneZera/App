@@ -24,6 +24,7 @@ void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Bur
     out->tnt = 0;
     out->diamond = 0;
     out->iron = 0;
+    out->fish = 0;
 
     uint64_t seed;
     uint64_t populationSeed = mc_setPopulationSeed(&seed, worldSeed, chunkX * 16, chunkZ * 16);
@@ -75,12 +76,14 @@ void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Bur
         }
     }
 
-    /* Pool 5: rolls=2 (fixed, no draw). Entries: cooked_cod(2-4), cooked_salmon(2-4), both w1. */
+    /* Pool 5: rolls=2 (fixed, no draw). Entries: cooked_cod(2-4), cooked_salmon(2-4), both w1.
+     * Always exactly 2 rolls at 2-4 each regardless of which fish is picked, so total fish is
+     * always in [4,8] - every buried treasure chest has at least 4 fish, guaranteed. */
     {
         int32_t weights[] = {1, 1};
         for (int32_t i = 0; i < 2; i++) {
             pick_entry(&s, weights, 2);
-            mc_nextIntRange(&s, 2, 4);
+            out->fish += mc_nextIntRange(&s, 2, 4);
         }
     }
 }

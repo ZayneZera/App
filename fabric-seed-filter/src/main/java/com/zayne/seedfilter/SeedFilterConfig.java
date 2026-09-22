@@ -24,6 +24,7 @@ public class SeedFilterConfig {
     public int buriedTreasureMinTnt = 0;
     public boolean buriedTreasureDiamondFilter = false;
     public boolean buriedTreasureIronFilter = false;
+    public int buriedTreasureMinFish = 4;
 
     public boolean bastionEnabled = true;
     public boolean bastionAllowBridge = true;
@@ -74,6 +75,7 @@ public class SeedFilterConfig {
             case "buried_treasure_min_tnt": buriedTreasureMinTnt = value; break;
             case "buried_treasure_diamond_filter": buriedTreasureDiamondFilter = value != 0; break;
             case "buried_treasure_iron_filter": buriedTreasureIronFilter = value != 0; break;
+            case "buried_treasure_min_fish": buriedTreasureMinFish = value; break;
             case "bastion_enabled": bastionEnabled = value != 0; break;
             case "bastion_allow_bridge": bastionAllowBridge = value != 0; break;
             case "bastion_allow_housing": bastionAllowHousing = value != 0; break;
@@ -105,6 +107,7 @@ public class SeedFilterConfig {
             lines.add("buried_treasure_min_tnt=" + buriedTreasureMinTnt);
             lines.add("buried_treasure_diamond_filter=" + bit(buriedTreasureDiamondFilter));
             lines.add("buried_treasure_iron_filter=" + bit(buriedTreasureIronFilter));
+            lines.add("buried_treasure_min_fish=" + buriedTreasureMinFish);
             lines.add("bastion_enabled=" + bit(bastionEnabled));
             lines.add("bastion_allow_bridge=" + bit(bastionAllowBridge));
             lines.add("bastion_allow_housing=" + bit(bastionAllowHousing));

@@ -121,7 +121,8 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
         if (!find_structure_within(Treasure, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->buriedTreasureMaxChunks, &treasurePos)) {
             return 0;
         }
-        if (cfg->buriedTreasureMinTnt > 0 || cfg->buriedTreasureDiamondFilter || cfg->buriedTreasureIronFilter) {
+        if (cfg->buriedTreasureMinTnt > 0 || cfg->buriedTreasureDiamondFilter || cfg->buriedTreasureIronFilter ||
+            cfg->buriedTreasureMinFish > 4) {
             BuriedTreasureLoot loot;
             loot_buriedTreasure(seed, treasurePos.x >> 4, treasurePos.z >> 4, &loot);
             if (loot.tnt < cfg->buriedTreasureMinTnt) return 0;
@@ -130,6 +131,7 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
                 int minIron = cfg->buriedTreasureDiamondFilter ? 7 : 10;
                 if (loot.iron < minIron) return 0;
             }
+            if (loot.fish < cfg->buriedTreasureMinFish) return 0;
         }
         BUMP(passedTreasure);
     }

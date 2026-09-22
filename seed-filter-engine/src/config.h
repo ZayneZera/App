@@ -14,6 +14,7 @@ typedef struct {
     int buriedTreasureMinTnt;           /* 0-2, 0 = no TNT requirement */
     int buriedTreasureDiamondFilter;    /* requires >= 3 diamonds */
     int buriedTreasureIronFilter;       /* requires >= 10 iron, or >= 7 if diamond filter is also on */
+    int buriedTreasureMinFish;          /* 4-8; every chest has 4-8 fish already, so 4 = no-op */
 
     int bastionEnabled;
     int bastionAllowBridge;

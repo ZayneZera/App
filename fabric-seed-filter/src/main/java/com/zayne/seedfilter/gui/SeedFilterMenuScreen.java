@@ -72,6 +72,7 @@ public class SeedFilterMenuScreen extends Screen {
         addSliderRow(contentX, contentW, "Min TNT", 0, 2, config.buriedTreasureMinTnt, v -> config.buriedTreasureMinTnt = v);
         addCheckboxRow(contentX, "Diamanten (>=3)", config.buriedTreasureDiamondFilter, v -> config.buriedTreasureDiamondFilter = v);
         addCheckboxRow(contentX, "Iron (>=10, >=7 mit Dia)", config.buriedTreasureIronFilter, v -> config.buriedTreasureIronFilter = v);
+        addSliderRow(contentX, contentW, "Min Fisch", 4, 8, config.buriedTreasureMinFish, v -> config.buriedTreasureMinFish = v);
         addDivider(contentX, contentW);
 
         addSection("Bastion", contentX, contentW, config.bastionEnabled, v -> config.bastionEnabled = v);

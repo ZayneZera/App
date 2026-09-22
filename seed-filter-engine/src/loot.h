@@ -7,6 +7,7 @@ typedef struct {
     int tnt;
     int diamond;
     int iron;
+    int fish; /* cooked_cod + cooked_salmon combined */
 } BuriedTreasureLoot;
 
 /* Resolves a buried treasure chest's contents (TNT/diamond/iron totals across the whole chest)
