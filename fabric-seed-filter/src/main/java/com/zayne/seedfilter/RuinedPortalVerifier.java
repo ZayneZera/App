@@ -126,15 +126,16 @@ public final class RuinedPortalVerifier {
             boolean cryingFound = false;
             int airCount = 0;
             for (RuinedPortalTemplates.FrameCell cell : template.cells) {
-                // Cells where the template itself places air (isObsidianTemplate=false) aren't
-                // degradation gaps that need filling - they're air by design, same as any other
-                // seed. Only cells the template actually placed obsidian at can either have
-                // rolled Crying Obsidian or been removed by age/integrity degradation; counting
-                // the by-design air cells as gaps too was inflating the required chest-obsidian
-                // count on every single check, well past what real portals' chests carry.
-                if (!cell.isObsidianTemplate) {
-                    continue;
-                }
+                // Every tracked frame cell counts, including isObsidianTemplate=false ones - a
+                // real in-game NBT dump (parsed from the actual ruined_portal/*.nbt files, see
+                // RuinedPortalTemplates' doc) confirmed those aren't "fine to stay air", they're
+                // an entire missing pillar/side baked into the STATIC template itself (every
+                // template has one side noticeably more intact than the other - that IS the
+                // "ruined" look), no different from a degraded cell needing chest obsidian to
+                // repair. Skipping them (an earlier version of this check did, to avoid inflating
+                // the required count past what real chests carry) made the check approve portals
+                // that can't actually be lit with just their own chest's obsidian - confirmed via
+                // a real seed where "Approved" was reported despite an entire pillar being air.
                 BlockPos t = RuinedPortalTemplates.transformAround(cell.x, cell.y, cell.z, result.rpMirror, result.rpRotation, pivotX, pivotZ);
                 BlockPos worldPos = new BlockPos(t.getX() + portalX + correctionDx, t.getY() + n, t.getZ() + portalZ + correctionDz);
                 world.getChunk(worldPos.getX() >> 4, worldPos.getZ() >> 4);
