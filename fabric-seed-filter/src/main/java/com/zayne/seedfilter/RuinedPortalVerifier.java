@@ -94,8 +94,18 @@ public final class RuinedPortalVerifier {
 
             BlockPos realChest = findChestNear(world, predictedChestX, predictedChestZ, CHEST_SEARCH_RADIUS);
             if (realChest == null) {
+                // Not just a bigger prediction error than CHEST_SEARCH_RADIUS covers - vanilla
+                // structure placement can decide a structure has a valid "start" position (which is
+                // all /locate and cubiomes' isViableStructurePos check - and both of those agreeing
+                // with us is exactly why a portal can be "located" here yet genuinely never placed
+                // a single block) without the piece actually generating there. Either way this seed
+                // has no usable portal, so treat it exactly like "Not Approved" and keep searching
+                // instead of stranding the player in a world with nothing to find.
                 sendErrorMessage(client, "Chest nicht gefunden im Umkreis von " + CHEST_SEARCH_RADIUS
-                        + " um (" + predictedChestX + ",?," + predictedChestZ + ")");
+                        + " um (" + predictedChestX + ",?," + predictedChestZ + ") - Portal existiert vermutlich nicht wirklich, suche weiter");
+                if (onNotApproved != null) {
+                    onNotApproved.run();
+                }
                 return;
             }
             int correctionDx = realChest.getX() - predictedChestX;
