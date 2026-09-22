@@ -2,8 +2,10 @@ package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.ExternalEngine;
 import com.zayne.seedfilter.SeedFilterConfig;
+import com.zayne.seedfilter.mixin.AbstractButtonWidgetAccessor;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.AbstractButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -24,6 +26,11 @@ import java.util.function.IntConsumer;
  * enough context on its own.
  */
 public class SeedFilterMenuScreen extends Screen {
+
+    /** Section header row height - taller than a plain icon toggle so a block-textured icon
+     * (Obsidian/Blackstone/Nether Bricks) doesn't look cramped against the row's edges. */
+    private static final int SECTION_H = 20;
+    private static final int ICON_STEP = IconToggleButton.SIZE + 6;
 
     private final Screen background;
     private final SeedFilterConfig config;
@@ -66,13 +73,16 @@ public class SeedFilterMenuScreen extends Screen {
         int contentW = panelW - 32;
         nextY = panelY + 14 - scrollOffset;
 
-        addCheckboxRow(contentX, "Seedbank: ODER statt UND zwischen Filtern", config.orMode, v -> config.orMode = v);
+        this.addButton(new TextToggleButton(contentX, nextY, 70, 18, "UND", "ODER", config.orMode, v -> config.orMode = v));
+        nextY += 18 + 6;
         addDivider(contentX, contentW);
 
         addSection("Ruined Portal", Items.OBSIDIAN, contentX, contentW, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
-        addCheckboxRow(contentX, "Schwert mit Looting II/III", config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v);
+        // Looting-sword and frame-check: icon-only toggles side by side, no label text.
+        this.addButton(new IconToggleButton(contentX, nextY, Items.GOLDEN_SWORD, config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v));
+        this.addButton(new IconToggleButton(contentX + ICON_STEP, nextY, Items.CRYING_OBSIDIAN, config.ruinedPortalFrameCheck, v -> config.ruinedPortalFrameCheck = v));
+        nextY += ICON_STEP;
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.ruinedPortalMaxChunks, v -> config.ruinedPortalMaxChunks = v);
-        addCheckboxRow(contentX, "Frame-Check (approx.)", config.ruinedPortalFrameCheck, v -> config.ruinedPortalFrameCheck = v);
         addDivider(contentX, contentW);
 
         addSection("Village", Items.BELL, contentX, contentW, config.villageEnabled, v -> config.villageEnabled = v);
@@ -82,25 +92,25 @@ public class SeedFilterMenuScreen extends Screen {
         addSection("Buried Treasure", Items.CHEST, contentX, contentW, config.buriedTreasureEnabled, v -> config.buriedTreasureEnabled = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.buriedTreasureMaxChunks, v -> config.buriedTreasureMaxChunks = v);
 
-        // Diamond/Iron: icon-only toggles side by side (no label - the icon already says what it
-        // is), TNT: icon + a much smaller slider right next to it (0-2 range, a full-width slider
-        // would be mostly empty track for 3 possible values).
+        // Diamond/Iron/TNT all in one row: icon-only toggles for the first two (no label - the
+        // icon already says what it is), TNT gets its icon plus a much smaller slider right next
+        // to it (0-2 range, a full-width slider would be mostly empty track for 3 possible values).
         this.addButton(new IconToggleButton(contentX, nextY, Items.DIAMOND, config.buriedTreasureDiamondFilter, v -> config.buriedTreasureDiamondFilter = v));
-        this.addButton(new IconToggleButton(contentX + IconToggleButton.SIZE + 6, nextY, Items.IRON_INGOT, config.buriedTreasureIronFilter, v -> config.buriedTreasureIronFilter = v));
-        nextY += IconToggleButton.SIZE + 6;
-
-        staticIcons.add(new Object[]{Items.TNT, contentX, nextY});
-        this.addButton(new SnapSlider(contentX + 22, nextY + 3, 70, 12, "TNT", 0, 2, config.buriedTreasureMinTnt, DarkTheme.ACCENT, v -> config.buriedTreasureMinTnt = v));
-        nextY += 23;
+        this.addButton(new IconToggleButton(contentX + ICON_STEP, nextY, Items.IRON_INGOT, config.buriedTreasureIronFilter, v -> config.buriedTreasureIronFilter = v));
+        staticIcons.add(new Object[]{Items.TNT, contentX + ICON_STEP * 2, nextY + 1});
+        this.addButton(new SnapSlider(contentX + ICON_STEP * 2 + 22, nextY + 4, 70, 12, "TNT", 0, 2, config.buriedTreasureMinTnt, DarkTheme.ACCENT, v -> config.buriedTreasureMinTnt = v));
+        nextY += ICON_STEP;
 
         addSliderRow(contentX, contentW, "Min Fisch", 4, 8, config.buriedTreasureMinFish, v -> config.buriedTreasureMinFish = v);
         addDivider(contentX, contentW);
 
         addSection("Bastion", Items.BLACKSTONE, contentX, contentW, config.bastionEnabled, v -> config.bastionEnabled = v);
-        addCheckboxRow(contentX, "Bridge", config.bastionAllowBridge, v -> config.bastionAllowBridge = v);
-        addCheckboxRow(contentX, "Housing", config.bastionAllowHousing, v -> config.bastionAllowHousing = v);
-        addCheckboxRow(contentX, "Stables", config.bastionAllowStables, v -> config.bastionAllowStables = v);
-        addCheckboxRow(contentX, "Treasure", config.bastionAllowTreasure, v -> config.bastionAllowTreasure = v);
+        // Bridge/Housing/Stables/Treasure: icon-only toggles side by side, no label text.
+        this.addButton(new IconToggleButton(contentX, nextY, Items.LODESTONE, config.bastionAllowBridge, v -> config.bastionAllowBridge = v));
+        this.addButton(new IconToggleButton(contentX + ICON_STEP, nextY, Items.BLACK_BED, config.bastionAllowHousing, v -> config.bastionAllowHousing = v));
+        this.addButton(new IconToggleButton(contentX + ICON_STEP * 2, nextY, Items.SADDLE, config.bastionAllowStables, v -> config.bastionAllowStables = v));
+        this.addButton(new IconToggleButton(contentX + ICON_STEP * 3, nextY, Items.GOLD_BLOCK, config.bastionAllowTreasure, v -> config.bastionAllowTreasure = v));
+        nextY += ICON_STEP;
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.bastionMaxNetherChunks, v -> config.bastionMaxNetherChunks = v);
         addDivider(contentX, contentW);
 
@@ -115,8 +125,8 @@ public class SeedFilterMenuScreen extends Screen {
     }
 
     private void addSection(String name, Item icon, int x, int w, boolean initial, Consumer<Boolean> setter) {
-        this.addButton(new SectionToggleButton(x, nextY, w, 16, name, icon, initial, setter));
-        nextY += 20;
+        this.addButton(new SectionToggleButton(x, nextY, w, SECTION_H, name, icon, initial, setter));
+        nextY += SECTION_H + 4;
     }
 
     private void addCheckboxRow(int x, String label, boolean initial, Consumer<Boolean> setter) {
@@ -142,21 +152,35 @@ public class SeedFilterMenuScreen extends Screen {
 
         fillRounded(matrices, panelX, panelY, panelW, panelH, DarkTheme.PANEL, DarkTheme.BORDER);
 
+        // Scrolling only moves each row's own Y (see init()'s "panelY + 14 - scrollOffset"
+        // starting point) - widgets themselves have no idea about the panel's visible bounds, so
+        // one scrolled above/below it stayed fully clickable even once its label (drawn below,
+        // with its own bounds check) had already stopped rendering. Hide (which also disables
+        // click handling, since AbstractButtonWidget's own mouseClicked checks this same field)
+        // anything outside the visible content band before letting vanilla render/handle input.
+        int visibleTop = panelY + 10;
+        int visibleBottom = panelY + panelH - 10;
+        for (AbstractButtonWidget widget : this.buttons) {
+            AbstractButtonWidgetAccessor accessor = (AbstractButtonWidgetAccessor) widget;
+            int y = accessor.getY();
+            accessor.setVisible(y >= visibleTop && y <= visibleBottom);
+        }
+
         for (int y : dividerYs) {
-            if (y < panelY || y > panelY + panelH - 10) continue;
+            if (y < visibleTop || y > visibleBottom) continue;
             fill(matrices, panelX + 12, y, panelX + panelW - 12, y + 1, DarkTheme.BORDER);
         }
 
         for (Object[] entry : checkboxLabels) {
             int y = (int) entry[2];
-            if (y < panelY || y > panelY + panelH - 10) continue;
+            if (y < visibleTop || y > visibleBottom) continue;
             drawStringWithShadow(matrices, this.textRenderer, (String) entry[0], (int) entry[1], y, DarkTheme.TEXT_DIM);
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
         for (Object[] entry : staticIcons) {
             int y = (int) entry[2];
-            if (y < panelY || y > panelY + panelH - 10) continue;
+            if (y < visibleTop || y > visibleBottom) continue;
             client.getItemRenderer().renderGuiItemIcon(new ItemStack((Item) entry[0]), (int) entry[1], y);
         }
 

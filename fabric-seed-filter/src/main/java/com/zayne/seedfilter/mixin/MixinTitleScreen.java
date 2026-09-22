@@ -1,7 +1,9 @@
 package com.zayne.seedfilter.mixin;
 
 import com.zayne.seedfilter.SeedFilterMod;
+import com.zayne.seedfilter.gui.SeedBankBrowseScreen;
 import com.zayne.seedfilter.gui.SeedBankScanScreen;
+import com.zayne.seedfilter.gui.SeedFilterMenuScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -34,21 +36,37 @@ public abstract class MixinTitleScreen extends Screen {
         // sitting right next to it, mirroring the golden boots icon on the left of the button.
         int singleplayerRowY = this.height / 4 + 48;
 
-        this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS, button ->
-                SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this)));
+        // Left-click: quick search-and-join. Right-click: jump straight to settings (Ctrl+M) -
+        // same as the hotkey, just reachable without remembering it.
+        this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS,
+                button -> SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this),
+                () -> MinecraftClient.getInstance().openScreen(new SeedFilterMenuScreen((Screen) (Object) this))));
 
         // Directly below the search-and-join button: the seed bank's "find and save, don't join"
         // mode - keeps searching indefinitely and stacking matches instead of stopping at one.
-        this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.ENDER_CHEST, button ->
-                MinecraftClient.getInstance().openScreen(new SeedBankScanScreen((Screen) (Object) this))));
+        // Left-click: start a scan. Right-click: skip straight to browsing what's already saved.
+        this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.ENDER_CHEST,
+                button -> MinecraftClient.getInstance().openScreen(new SeedBankScanScreen((Screen) (Object) this)),
+                () -> MinecraftClient.getInstance().openScreen(new SeedBankBrowseScreen((Screen) (Object) this))));
     }
 
     private static class IconButton extends ButtonWidget {
         private final Item icon;
+        private final Runnable onRightClick;
 
-        IconButton(int x, int y, int size, Item icon, PressAction onPress) {
+        IconButton(int x, int y, int size, Item icon, PressAction onPress, Runnable onRightClick) {
             super(x, y, size, size, LiteralText.EMPTY, onPress);
             this.icon = icon;
+            this.onRightClick = onRightClick;
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 1 && this.active && this.visible && this.isMouseOver(mouseX, mouseY)) {
+                onRightClick.run();
+                return true;
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         @Override
