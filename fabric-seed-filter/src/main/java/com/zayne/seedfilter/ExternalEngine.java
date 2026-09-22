@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 
 /**
  * Runs the native seed-filter-engine.exe (C + cubiomes, see seed-filter-engine/ in the repo)
@@ -21,6 +22,16 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ExternalEngine {
 
     private static final Logger LOGGER = LogManager.getLogger("seed-filter");
+
+    /** Mirrors config.h's CATEGORY_* bit flags exactly - which top-level category(ies) a seed
+     * matched. In AND-mode searches (the normal join-now flow) this is always exactly the full
+     * enabled set; in OR-mode (the seed bank) it can be any non-empty subset, and more than one
+     * bit set is what the seed bank tags "OP". */
+    public static final int CATEGORY_VILLAGE = 1;
+    public static final int CATEGORY_RUINED_PORTAL = 1 << 1;
+    public static final int CATEGORY_TREASURE = 1 << 2;
+    public static final int CATEGORY_BASTION = 1 << 3;
+    public static final int CATEGORY_FORTRESS = 1 << 4;
 
     public static class Result {
         public final long seed;
@@ -36,12 +47,96 @@ public class ExternalEngine {
         public int rpTemplateIndex, rpRotation, rpMirror;
         public int rpChestObsidian;
 
+        /** Bitwise-OR of the CATEGORY_* flags above. Defaults to 0 for a result parsed from a
+         * pre-OR-mode exe build (no MatchedCategories: line) - callers that need it should treat
+         * 0 here as "unknown / assume fully matched", not "matched nothing" (a genuine 0 can never
+         * reach a Result at all, since the exe only reports a match when at least one bit is set). */
+        public int matchedCategories = 0;
+
         public Result(long seed, int spawnX, int spawnZ, boolean cheats, boolean creative) {
             this.seed = seed;
             this.spawnX = spawnX;
             this.spawnZ = spawnZ;
             this.cheats = cheats;
             this.creative = creative;
+        }
+    }
+
+    /** Accumulates one result's fields as its "Key: value" lines stream in from the exe's stdout -
+     * shared by runAsync (one shot, builds on process exit) and runBankSearch (streaming, builds
+     * on each "MatchEnd:" line and then resets for the next one). */
+    private static final class ResultAccumulator {
+        Long seed;
+        Integer spawnX, spawnZ;
+        boolean cheats, creative;
+        Integer rpPortalX, rpPortalZ, rpTemplateIndex, rpRotation, rpMirror, rpChestObsidian;
+        int matchedCategories = 0;
+
+        /** Returns true if the line was one of ours (consumed), false if the caller should
+         * handle it itself (e.g. "Progress:"). */
+        boolean consume(String line) {
+            if (line.startsWith("Seed:")) {
+                seed = Long.parseLong(line.substring("Seed:".length()).trim());
+            } else if (line.startsWith("SpawnX:")) {
+                spawnX = Integer.parseInt(line.substring("SpawnX:".length()).trim());
+            } else if (line.startsWith("SpawnZ:")) {
+                spawnZ = Integer.parseInt(line.substring("SpawnZ:".length()).trim());
+            } else if (line.startsWith("Cheats:")) {
+                cheats = line.substring("Cheats:".length()).trim().equals("1");
+            } else if (line.startsWith("Creative:")) {
+                creative = line.substring("Creative:".length()).trim().equals("1");
+            } else if (line.startsWith("RpPortalX:")) {
+                rpPortalX = Integer.parseInt(line.substring("RpPortalX:".length()).trim());
+            } else if (line.startsWith("RpPortalZ:")) {
+                rpPortalZ = Integer.parseInt(line.substring("RpPortalZ:".length()).trim());
+            } else if (line.startsWith("RpTemplateIndex:")) {
+                rpTemplateIndex = Integer.parseInt(line.substring("RpTemplateIndex:".length()).trim());
+            } else if (line.startsWith("RpRotation:")) {
+                rpRotation = Integer.parseInt(line.substring("RpRotation:".length()).trim());
+            } else if (line.startsWith("RpMirror:")) {
+                rpMirror = Integer.parseInt(line.substring("RpMirror:".length()).trim());
+            } else if (line.startsWith("RpChestObsidian:")) {
+                rpChestObsidian = Integer.parseInt(line.substring("RpChestObsidian:".length()).trim());
+            } else if (line.startsWith("MatchedCategories:")) {
+                matchedCategories = Integer.parseInt(line.substring("MatchedCategories:".length()).trim());
+            } else {
+                return false;
+            }
+            return true;
+        }
+
+        /** Null if seed/spawnX/spawnZ haven't all been seen yet. */
+        Result buildIfComplete() {
+            if (seed == null || spawnX == null || spawnZ == null) {
+                return null;
+            }
+            Result result = new Result(seed, spawnX, spawnZ, cheats, creative);
+            result.matchedCategories = matchedCategories;
+            if (rpPortalX != null && rpPortalZ != null && rpTemplateIndex != null && rpRotation != null && rpMirror != null && rpChestObsidian != null) {
+                result.rpFound = true;
+                result.rpPortalX = rpPortalX;
+                result.rpPortalZ = rpPortalZ;
+                result.rpTemplateIndex = rpTemplateIndex;
+                result.rpRotation = rpRotation;
+                result.rpMirror = rpMirror;
+                result.rpChestObsidian = rpChestObsidian;
+            }
+            return result;
+        }
+
+        void reset() {
+            seed = null;
+            spawnX = null;
+            spawnZ = null;
+            cheats = false;
+            creative = false;
+            rpPortalX = null;
+            rpPortalZ = null;
+            rpTemplateIndex = null;
+            rpRotation = null;
+            rpMirror = null;
+            rpChestObsidian = null;
+            matchedCategories = 0;
         }
     }
 
@@ -96,39 +191,13 @@ public class ExternalEngine {
                 Thread killOnJvmExit = new Thread(process::destroy);
                 Runtime.getRuntime().addShutdownHook(killOnJvmExit);
 
-                Long seed = null;
-                Integer spawnX = null, spawnZ = null;
-                boolean cheats = false;
-                boolean creative = false;
-                Integer rpPortalX = null, rpPortalZ = null, rpTemplateIndex = null, rpRotation = null, rpMirror = null, rpChestObsidian = null;
+                ResultAccumulator acc = new ResultAccumulator();
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         line = line.trim();
-                        if (line.startsWith("Seed:")) {
-                            seed = Long.parseLong(line.substring("Seed:".length()).trim());
-                        } else if (line.startsWith("SpawnX:")) {
-                            spawnX = Integer.parseInt(line.substring("SpawnX:".length()).trim());
-                        } else if (line.startsWith("SpawnZ:")) {
-                            spawnZ = Integer.parseInt(line.substring("SpawnZ:".length()).trim());
-                        } else if (line.startsWith("Cheats:")) {
-                            cheats = line.substring("Cheats:".length()).trim().equals("1");
-                        } else if (line.startsWith("Creative:")) {
-                            creative = line.substring("Creative:".length()).trim().equals("1");
-                        } else if (line.startsWith("RpPortalX:")) {
-                            rpPortalX = Integer.parseInt(line.substring("RpPortalX:".length()).trim());
-                        } else if (line.startsWith("RpPortalZ:")) {
-                            rpPortalZ = Integer.parseInt(line.substring("RpPortalZ:".length()).trim());
-                        } else if (line.startsWith("RpTemplateIndex:")) {
-                            rpTemplateIndex = Integer.parseInt(line.substring("RpTemplateIndex:".length()).trim());
-                        } else if (line.startsWith("RpRotation:")) {
-                            rpRotation = Integer.parseInt(line.substring("RpRotation:".length()).trim());
-                        } else if (line.startsWith("RpMirror:")) {
-                            rpMirror = Integer.parseInt(line.substring("RpMirror:".length()).trim());
-                        } else if (line.startsWith("RpChestObsidian:")) {
-                            rpChestObsidian = Integer.parseInt(line.substring("RpChestObsidian:".length()).trim());
-                        } else if (line.startsWith("Progress:") && stats != null) {
+                        if (!acc.consume(line) && line.startsWith("Progress:") && stats != null) {
                             stats.applyProgressLine(line);
                         }
                     }
@@ -141,17 +210,8 @@ public class ExternalEngine {
                     // JVM is already shutting down - the hook will run (or has run) regardless.
                 }
 
-                if (seed != null && spawnX != null && spawnZ != null) {
-                    Result result = new Result(seed, spawnX, spawnZ, cheats, creative);
-                    if (rpPortalX != null && rpPortalZ != null && rpTemplateIndex != null && rpRotation != null && rpMirror != null && rpChestObsidian != null) {
-                        result.rpFound = true;
-                        result.rpPortalX = rpPortalX;
-                        result.rpPortalZ = rpPortalZ;
-                        result.rpTemplateIndex = rpTemplateIndex;
-                        result.rpRotation = rpRotation;
-                        result.rpMirror = rpMirror;
-                        result.rpChestObsidian = rpChestObsidian;
-                    }
+                Result result = acc.buildIfComplete();
+                if (result != null) {
                     future.complete(result);
                 } else {
                     future.completeExceptionally(new IOException("seedfilter.exe returned no seed (cancelled or NoMatch)"));
@@ -164,6 +224,63 @@ public class ExternalEngine {
         thread.start();
 
         return future;
+    }
+
+    /**
+     * Runs "seedfilter.exe --search-bank <config>" on a background thread for the seed bank's
+     * "find and save, don't join" mode: unlike runAsync, the process never exits after the first
+     * match - onMatch is invoked once per match as they stream in, indefinitely, until the caller
+     * cancels (via cancel(processHolder), same as runAsync) or the process otherwise exits.
+     * onProcessExit always runs exactly once when reading stops, cancelled or not, so a screen can
+     * reset its UI state (e.g. re-enable its start button) either way.
+     */
+    public static void runBankSearch(AtomicReference<Process> processHolder, EngineStats stats,
+                                      Consumer<Result> onMatch, Runnable onProcessExit) {
+        Thread thread = new Thread(() -> {
+            try {
+                Process process = new ProcessBuilder(
+                        getExePath().toString(), "--search-bank", getConfigPath().toString())
+                        .directory(getEngineDir().toFile())
+                        .redirectErrorStream(true)
+                        .start();
+                processHolder.set(process);
+                Thread killOnJvmExit = new Thread(process::destroy);
+                Runtime.getRuntime().addShutdownHook(killOnJvmExit);
+
+                ResultAccumulator acc = new ResultAccumulator();
+
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim();
+                        if (line.startsWith("MatchEnd:")) {
+                            Result result = acc.buildIfComplete();
+                            if (result != null) {
+                                onMatch.accept(result);
+                            }
+                            acc.reset();
+                        } else if (!acc.consume(line) && line.startsWith("Progress:") && stats != null) {
+                            stats.applyProgressLine(line);
+                        }
+                    }
+                }
+
+                process.waitFor();
+                try {
+                    Runtime.getRuntime().removeShutdownHook(killOnJvmExit);
+                } catch (IllegalStateException ignored) {
+                    // JVM is already shutting down - the hook will run (or has run) regardless.
+                }
+            } catch (IOException | InterruptedException | NumberFormatException e) {
+                LOGGER.warn("Seed bank background search ended", e);
+            } finally {
+                if (onProcessExit != null) {
+                    onProcessExit.run();
+                }
+            }
+        }, "seedfilter-bank-caller");
+        thread.setDaemon(true);
+        thread.start();
     }
 
     public static void cancel(AtomicReference<Process> processHolder) {
