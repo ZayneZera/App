@@ -158,7 +158,7 @@ public class SeedBankScanScreen extends Screen {
             if (config.bastionAllowBridge) sb.append("B");
             if (config.bastionAllowHousing) sb.append("H");
             if (config.bastionAllowStables) sb.append("S");
-            if (config.bastionAllowTreasure) sb.append("T");
+            if (config.bastionAllowTreasure) sb.append("K");
             rows.add(new Object[]{Items.BLACKSTONE, sb.toString(), DarkTheme.TEXT});
         }
         if (config.fortressEnabled) {

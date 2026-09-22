@@ -79,8 +79,10 @@ public final class SeedBankColumns {
                 stack -> stack.settings().buriedTreasureMinFish);
     }
 
-    /** Which bastion types were allowed (B=Bridge, H=Housing, S=Stables, T=Treasure). Not
-     * meaningfully orderable, so its sort key just keeps stacks stable relative to each other. */
+    /** Which bastion types were allowed (B=Bridge, H=Housing, S=Stables, K=Kammer/treasure room -
+     * deliberately NOT "T", since Bridge+Treasure would then render as "BT" and read as "Buried
+     * Treasure" at a glance next to the BT tab/column elsewhere in this same UI). Not meaningfully
+     * orderable, so its sort key just keeps stacks stable relative to each other. */
     public static Column bastionTypes() {
         return new Column("Typ", 46, false,
                 stack -> {
@@ -90,7 +92,7 @@ public final class SeedBankColumns {
                     if (s.bastionAllowBridge) sb.append("B");
                     if (s.bastionAllowHousing) sb.append("H");
                     if (s.bastionAllowStables) sb.append("S");
-                    if (s.bastionAllowTreasure) sb.append("T");
+                    if (s.bastionAllowTreasure) sb.append("K");
                     return sb.length() > 0 ? sb.toString() : "-";
                 },
                 stack -> 0);

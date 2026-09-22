@@ -148,7 +148,13 @@ public final class RuinedPortalVerifier {
             }
 
             boolean approved = !cryingFound && airCount <= result.rpChestObsidian;
-            sendResultMessage(client, approved, cryingFound, airCount, result.rpChestObsidian, onNotApproved);
+            LOGGER.info("Ruined Portal verification result: approved={} cryingFound={} airCount={} chestObsidian={} "
+                            + "portal=({},{}) predictedChest=({},?,{}) realChest=({},{},{}) correction=({},{}) "
+                            + "template={} rotation={} mirror={}",
+                    approved, cryingFound, airCount, result.rpChestObsidian, portalX, portalZ,
+                    predictedChestX, predictedChestZ, realChest.getX(), realChest.getY(), realChest.getZ(),
+                    correctionDx, correctionDz, result.rpTemplateIndex, result.rpRotation, result.rpMirror);
+            sendResultMessage(client, approved, cryingFound, airCount, result.rpChestObsidian, portalX, portalZ, onNotApproved);
         } catch (Exception e) {
             LOGGER.warn("Ruined Portal frame verification failed", e);
             sendErrorMessage(client, e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -203,19 +209,22 @@ public final class RuinedPortalVerifier {
         });
     }
 
-    private static void sendResultMessage(MinecraftClient client, boolean approved, boolean cryingFound, int airCount, int chestObsidian, Runnable onNotApproved) {
+    private static void sendResultMessage(MinecraftClient client, boolean approved, boolean cryingFound, int airCount,
+                                           int chestObsidian, int portalX, int portalZ, Runnable onNotApproved) {
         client.execute(() -> {
             if (client.player == null) {
                 return;
             }
             if (approved) {
-                client.player.sendMessage(new LiteralText("§a[SeedFilter] Ruined Portal: Approved")
+                client.player.sendMessage(new LiteralText("§a[SeedFilter] Ruined Portal: Approved (" + chestObsidian
+                        + " Obsidian in Chest, " + airCount + " Lücken, Portal bei " + portalX + "," + portalZ + ")")
                         .formatted(Formatting.GREEN), false);
             } else {
                 String reason = cryingFound
                         ? "Crying Obsidian im Rahmen"
                         : ("nicht genug Obsidian (" + chestObsidian + " in Chest, " + airCount + " Lücken)");
-                client.player.sendMessage(new LiteralText("§c[SeedFilter] Ruined Portal: Not Approved (" + reason + ")")
+                client.player.sendMessage(new LiteralText("§c[SeedFilter] Ruined Portal: Not Approved (" + reason
+                        + ", Portal bei " + portalX + "," + portalZ + ")")
                         .formatted(Formatting.RED), false);
                 if (onNotApproved != null) {
                     onNotApproved.run();
