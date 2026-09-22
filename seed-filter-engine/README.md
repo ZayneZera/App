@@ -33,7 +33,10 @@ x86_64-w64-mingw32-gcc -O2 -std=gnu11 -Isrc -Ithird_party/cubiomes \
 
 ## Layout
 
-- `src/config.c/h` - plain-text config load/save (`key=value` lines).
+- `src/config.c/h` - plain-text config load/save (`key=value` lines). Thread count defaults to the
+  real detected CPU core count (`GetSystemInfo` on Windows, `sysconf` elsewhere) rather than a
+  fixed number - the mod's in-game menu has no thread-count control and never writes
+  `thread_count=`, so this default is what every real search actually runs at.
 - `src/engine.c/h` - criteria checking against a single seed, using cubiomes' `getStructurePos`,
   `isViableStructurePos`, `getVariant` (bastion type) and `getSpawn` directly.
 - `src/search.c` - multithreaded random-seed scanning until a match or cancel.

@@ -4,6 +4,27 @@
 #include <string.h>
 #include <stdlib.h>
 
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif
+
+/* The mod's in-game menu has no thread-count control and never writes thread_count= into the
+ * .cfg file, so this default is what every real user actually runs at - a hardcoded 6 was
+ * measured leaving most of a modern CPU idle (a Ryzen 7800X3D has 16 logical threads). Detect the
+ * real core count instead, same as std::thread::hardware_concurrency() would. */
+static int detect_cpu_threads(void) {
+#ifdef _WIN32
+    SYSTEM_INFO sysinfo;
+    GetSystemInfo(&sysinfo);
+    int n = (int) sysinfo.dwNumberOfProcessors;
+#else
+    long n = sysconf(_SC_NPROCESSORS_ONLN);
+#endif
+    return n > 0 ? (int) n : 6;
+}
+
 void config_set_defaults(FilterConfig *cfg) {
     cfg->villageEnabled = 1;
     cfg->villageMaxChunks = 8;
@@ -33,7 +54,7 @@ void config_set_defaults(FilterConfig *cfg) {
     cfg->enableCheats = 0;
     cfg->creativeMode = 0;
 
-    cfg->threadCount = 6;
+    cfg->threadCount = detect_cpu_threads();
 }
 
 static void trim(char *s) {
