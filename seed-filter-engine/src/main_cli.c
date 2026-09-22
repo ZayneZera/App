@@ -63,6 +63,10 @@ static void print_result(const FilterResult *result, int withMatchEnd) {
         printf("RpChestObsidian: %d\n", result->rpChestObsidian);
     }
     printf("MatchedCategories: %d\n", result->matchedCategories);
+    printf("MainMatched: %d\n", result->mainMatched);
+    if (result->lootingFound) {
+        printf("LootingLevel: %d\n", result->lootingLevel);
+    }
     printf("Attempts: %ld\n", g_stats.attempts);
     if (withMatchEnd) {
         printf("MatchEnd: 1\n");

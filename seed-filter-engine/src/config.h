@@ -47,6 +47,11 @@ typedef struct {
 #define CATEGORY_TREASURE       (1 << 2)
 #define CATEGORY_BASTION        (1 << 3)
 #define CATEGORY_FORTRESS       (1 << 4)
+/* Set when this result is the independent "Looting II+ ruined portal within 8 chunks of spawn"
+ * side channel (see engine_check_seed) - always checked regardless of cfg's ruined-portal
+ * settings. Distinct from CATEGORY_RUINED_PORTAL, which reflects the normal (configurable-radius)
+ * ruined portal category instead. */
+#define CATEGORY_LOOTING_RP     (1 << 5)
 
 void config_set_defaults(FilterConfig *cfg);
 /* Returns 1 on success (file existed and was parsed), 0 if it used defaults because the file was missing. */

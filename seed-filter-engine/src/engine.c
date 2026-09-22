@@ -180,10 +180,37 @@ static int category_fortress(Generator *gNether, uint64_t seed, int netherX, int
     return 1;
 }
 
+/* The Looting side channel's search radius is fixed, independent of cfg->ruinedPortalMaxChunks -
+ * see engine_check_seed and FilterResult.lootingFound. */
+#define LOOTING_RP_MAX_CHUNKS 8
+
+/* Independent of cfg->ruinedPortalEnabled/ruinedPortalMaxChunks entirely - always looks within a
+ * fixed 8 chunks of spawn for a Ruined Portal with a Looting II+ golden sword. Returns 1 and fills
+ * *outLevel/*outPos on success. Shares category_ruined_portal's fixed base-loot requirement
+ * (golden axe + flint-and-steel-or-fire-charge) since a portal not worth using isn't worth
+ * reporting even if its sword rolled Looting. */
+static int find_looting_ruined_portal(Generator *gOverworld, uint64_t seed, int spawnX, int spawnZ,
+                                       int *outLevel, Pos *outPos) {
+    Pos portalPos;
+    if (!find_structure_within(Ruined_Portal, gOverworld, seed, spawnX, spawnZ, LOOTING_RP_MAX_CHUNKS, &portalPos)) {
+        return 0;
+    }
+    RuinedPortalLoot rpLoot;
+    loot_ruinedPortal(seed, portalPos.x >> 4, portalPos.z >> 4, &rpLoot);
+    if (rpLoot.goldenAxe < 1) return 0;
+    if (rpLoot.flintAndSteel < 1 && rpLoot.fireCharge < 1) return 0;
+    if (rpLoot.swordLootingLevel < 2) return 0;
+
+    *outLevel = rpLoot.swordLootingLevel;
+    *outPos = portalPos;
+    return 1;
+}
+
 int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out, ScanStats *stats) {
     if (out) {
         out->rpFound = 0;
         out->matchedCategories = 0;
+        out->lootingFound = 0;
     }
 
     Generator gOverworld;
@@ -200,8 +227,10 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
     /* Bastion and Fortress are NEVER part of the AND/OR choice below - each is unconditionally
      * mandatory whenever it's enabled, exactly like every category used to behave before orMode
      * existed. cfg->orMode only changes how Village/RuinedPortal/BuriedTreasure combine with each
-     * other: AND requires every one of THEM that's enabled, OR requires only one. Nether
-     * generator setup stays lazy - only paid if either is actually enabled. */
+     * other: AND requires every one of THEM that's enabled, OR requires only one. Both the normal
+     * match below AND the independent Looting side channel further down are gated by this -
+     * neither can succeed without it, so an early return here is safe for both. Nether generator
+     * setup stays lazy - only paid if either is actually enabled. */
     if (cfg->bastionEnabled || cfg->fortressEnabled) {
         setupGenerator(&gNether, MC, 0);
         applySeed(&gNether, DIM_NETHER, seed);
@@ -211,14 +240,18 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
 
     int flexEnabledCount = (cfg->villageEnabled ? 1 : 0) + (cfg->ruinedPortalEnabled ? 1 : 0) + (cfg->buriedTreasureEnabled ? 1 : 0);
     int flexMatched = 0;
+    int mainMatched;
 
     if (!cfg->orMode) {
-        if (cfg->villageEnabled && !category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) return 0;
-        if (cfg->ruinedPortalEnabled && !category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) return 0;
-        if (cfg->buriedTreasureEnabled && !category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) return 0;
-        if (cfg->villageEnabled) flexMatched |= CATEGORY_VILLAGE;
-        if (cfg->ruinedPortalEnabled) flexMatched |= CATEGORY_RUINED_PORTAL;
-        if (cfg->buriedTreasureEnabled) flexMatched |= CATEGORY_TREASURE;
+        mainMatched = 1;
+        if (cfg->villageEnabled && !category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) mainMatched = 0;
+        if (mainMatched && cfg->ruinedPortalEnabled && !category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) mainMatched = 0;
+        if (mainMatched && cfg->buriedTreasureEnabled && !category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) mainMatched = 0;
+        if (mainMatched) {
+            if (cfg->villageEnabled) flexMatched |= CATEGORY_VILLAGE;
+            if (cfg->ruinedPortalEnabled) flexMatched |= CATEGORY_RUINED_PORTAL;
+            if (cfg->buriedTreasureEnabled) flexMatched |= CATEGORY_TREASURE;
+        }
     } else {
         /* Every enabled one of the flexible three is evaluated regardless of the others'
          * outcome (no early exit - the full matched set is needed, not just whether any one
@@ -226,15 +259,54 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
         if (cfg->villageEnabled && category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) flexMatched |= CATEGORY_VILLAGE;
         if (cfg->ruinedPortalEnabled && category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) flexMatched |= CATEGORY_RUINED_PORTAL;
         if (cfg->buriedTreasureEnabled && category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) flexMatched |= CATEGORY_TREASURE;
-        if (flexEnabledCount > 0 && flexMatched == 0) return 0;
+        mainMatched = flexEnabledCount == 0 || flexMatched != 0;
     }
 
+    /* Independent Looting side channel: always checked, regardless of mainMatched or cfg's
+     * ruined-portal settings entirely - see find_looting_ruined_portal and FilterResult's doc. */
+    int lootingLevel = 0;
+    Pos lootingPortalPos;
+    int lootingMatched = find_looting_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, &lootingLevel, &lootingPortalPos);
+
+    if (!mainMatched && !lootingMatched) return 0;
+
     if (out) {
-        int matched = flexMatched;
+        int matched = 0;
         if (cfg->bastionEnabled) matched |= CATEGORY_BASTION;
         if (cfg->fortressEnabled) matched |= CATEGORY_FORTRESS;
-        out->matchedCategories = matched;
+        if (mainMatched) matched |= flexMatched;
 
+        if (lootingMatched) {
+            matched |= CATEGORY_LOOTING_RP;
+            /* Informational only - recomputed independently of flexMatched/mainMatched above,
+             * since in AND mode flexMatched can be incomplete (early-exit) when mainMatched is
+             * false, which would otherwise wrongly hide a Village/BuriedTreasure match that DID
+             * happen from a Looting-only result. */
+            if (cfg->villageEnabled && category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, NULL)) matched |= CATEGORY_VILLAGE;
+            if (cfg->buriedTreasureEnabled && category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, NULL)) matched |= CATEGORY_TREASURE;
+
+            /* The looting portal's own placement, for the mod's real in-game frame-completability
+             * check on join - overrides whatever the normal RP category (if also matched) wrote
+             * above, since only one portal per result is meaningful to actually join. */
+            int biomeID = getBiomeAt(&gOverworld, 4, lootingPortalPos.x >> 2, 0, lootingPortalPos.z >> 2);
+            int templateIndex, rotation, mirror;
+            if (rp_determinePlacement(seed, biomeID, lootingPortalPos.x, lootingPortalPos.z, &templateIndex, &rotation, &mirror)) {
+                RuinedPortalLoot rpLoot;
+                loot_ruinedPortal(seed, lootingPortalPos.x >> 4, lootingPortalPos.z >> 4, &rpLoot);
+                out->rpFound = 1;
+                out->rpPortalX = lootingPortalPos.x;
+                out->rpPortalZ = lootingPortalPos.z;
+                out->rpTemplateIndex = templateIndex;
+                out->rpRotation = rotation;
+                out->rpMirror = mirror;
+                out->rpChestObsidian = rpLoot.obsidian;
+            }
+            out->lootingFound = 1;
+            out->lootingLevel = lootingLevel;
+        }
+
+        out->matchedCategories = matched;
+        out->mainMatched = mainMatched;
         out->seed = seed;
         out->spawnX = spawn.x;
         out->spawnZ = spawn.z;

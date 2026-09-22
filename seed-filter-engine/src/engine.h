@@ -26,8 +26,29 @@ typedef struct {
      * seed actually passed. In AND mode (cfg->orMode == 0) this is always exactly the full set of
      * enabled categories (nothing else would have matched). In OR mode it can be any non-empty
      * subset - more than one bit set means the seed satisfies multiple independently, which is
-     * what the mod's seed bank uses to tag a seed "OP". */
+     * what the mod's seed bank uses to tag a seed "OP". CATEGORY_LOOTING_RP is set independently
+     * of all of that - see lootingFound below. */
     int matchedCategories;
+
+    /* Independent side channel, checked on every seed regardless of cfg's ruined-portal settings
+     * or whether the normal category match above succeeded: a Ruined Portal with a Looting II+
+     * golden sword within a FIXED 8 chunks of spawn. Bastion/Fortress still gate this exactly like
+     * the normal match (mandatory whenever enabled) - Village/BuriedTreasure do not gate it, they
+     * are purely informational (CATEGORY_VILLAGE/CATEGORY_TREASURE end up in matchedCategories
+     * alongside CATEGORY_LOOTING_RP when they also happen to match, for the seed bank's Looting
+     * tab to show). When lootingFound, rpFound/rpPortalX/rpPortalZ/rpTemplateIndex/rpRotation/
+     * rpMirror/rpChestObsidian above describe THIS looting portal (not the normal RP category's,
+     * which this overrides if both happened to fire for the same seed - only one portal per result
+     * is meaningful to actually join). */
+    int lootingFound;
+    int lootingLevel; /* 2 or 3, only meaningful when lootingFound */
+
+    /* 1 if the seed satisfies the user's actual configured category filter (the pre-Looting-side-
+     * channel behavior) - 0 if this result exists ONLY because of the independent Looting side
+     * channel above (lootingFound is then always 1 too). The mod's single "join now" search uses
+     * this to tell a real hit apart from an incidental Looting find that should be saved to the
+     * seed bank and NOT joined - see SeedFilterMod's search flow. */
+    int mainMatched;
 } FilterResult;
 
 /* Funnel counters, mirroring the mod's old ScanStats: "reached" = seeds that already passed
