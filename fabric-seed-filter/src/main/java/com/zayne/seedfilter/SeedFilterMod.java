@@ -1,5 +1,6 @@
 package com.zayne.seedfilter;
 
+import com.zayne.seedfilter.gui.CountdownScreen;
 import com.zayne.seedfilter.gui.EngineMissingScreen;
 import com.zayne.seedfilter.gui.ScanProgressScreen;
 import com.zayne.seedfilter.mixin.CreateWorldScreenAccessor;
@@ -8,7 +9,6 @@ import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.text.LiteralText;
@@ -61,7 +61,10 @@ public class SeedFilterMod implements ClientModInitializer {
         createAndJoin(client, titleScreen, result, 1);
     }
 
-    private static void createAndJoin(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result, int attempt) {
+    /** attempt is threaded through by RuinedPortalVerifier's auto-retry (via CountdownScreen) so
+     * MAX_RP_RETRY_ATTEMPTS counts correctly across repeated "Not Approved" loops instead of
+     * resetting to 1 on every retry. */
+    public static void createAndJoin(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result, int attempt) {
         CreateWorldScreen screen = new CreateWorldScreen(titleScreen);
         client.openScreen(screen);
 
@@ -82,13 +85,15 @@ public class SeedFilterMod implements ClientModInitializer {
         accessor.invokeCreateLevel();
         announceSpawnOffset(client, result.spawnX, result.spawnZ);
         RuinedPortalVerifier.verifyAndAnnounce(client, result, SeedFilterConfig.load(ExternalEngine.getConfigPath()),
-                () -> retryForNewSeed(client, titleScreen, attempt));
+                () -> retryForNewSeed(client, attempt));
     }
 
-    /** Called when RuinedPortalVerifier comes back "Not Approved" - disconnects from the
-     * just-created (unusable) world and automatically starts a fresh search, looping until an
-     * actually-completable portal is found or MAX_RP_RETRY_ATTEMPTS is hit. */
-    private static void retryForNewSeed(MinecraftClient client, Screen titleScreen, int previousAttempt) {
+    /** Called when RuinedPortalVerifier comes back "Not Approved" (or can't find the portal at
+     * all) - reuses the same disconnect/search/rejoin flow as the pause-menu "Nächster Seed"
+     * button (CountdownScreen), so this gets its progress display and working Abbrechen/Escape
+     * cancel button for free instead of running invisibly in the background with no way to stop
+     * it. Loops until an actually-completable portal is found or MAX_RP_RETRY_ATTEMPTS is hit. */
+    private static void retryForNewSeed(MinecraftClient client, int previousAttempt) {
         int attempt = previousAttempt + 1;
         if (attempt > MAX_RP_RETRY_ATTEMPTS) {
             client.execute(() -> {
@@ -104,27 +109,8 @@ public class SeedFilterMod implements ClientModInitializer {
                 client.player.sendMessage(new LiteralText("§7[SeedFilter] Nicht completable, suche weiter... (Versuch "
                         + attempt + ")").formatted(Formatting.GRAY), false);
             }
-            if (client.world != null) {
-                client.world.disconnect();
-            }
-            client.disconnect(new TitleScreen());
-            waitThenRetry(client, titleScreen, attempt, 3);
+            client.openScreen(new CountdownScreen(attempt));
         });
-    }
-
-    private static void waitThenRetry(MinecraftClient client, Screen titleScreen, int attempt, int settleTicks) {
-        if (client.world != null) {
-            client.execute(() -> waitThenRetry(client, titleScreen, attempt, settleTicks));
-        } else if (settleTicks > 0) {
-            client.execute(() -> waitThenRetry(client, titleScreen, attempt, settleTicks - 1));
-        } else {
-            ExternalEngine.runAsync(new AtomicReference<>(), null).thenAccept(result ->
-                    client.execute(() -> createAndJoin(client, titleScreen, result, attempt))
-            ).exceptionally(error -> {
-                LOGGER.warn("Retry seed search did not produce a result", error);
-                return null;
-            });
-        }
     }
 
     /**

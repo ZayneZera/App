@@ -36,9 +36,19 @@ public class CountdownScreen extends Screen {
     private boolean triggered = false;
     private double maxPctSeen = 0.0;
     private final SmoothedValue smoothedPct = new SmoothedValue();
+    private final int startAttempt;
 
     public CountdownScreen() {
+        this(1);
+    }
+
+    /** startAttempt lets a Ruined Portal auto-retry (see SeedFilterMod.retryForNewSeed) carry its
+     * attempt count through this same disconnect/search/rejoin flow, so MAX_RP_RETRY_ATTEMPTS
+     * still counts correctly across repeated "Not Approved" loops instead of resetting to 1 each
+     * time the pause-menu "Nächster Seed" codepath is reused for it. */
+    public CountdownScreen(int startAttempt) {
         super(new LiteralText("Nächster Seed"));
+        this.startAttempt = startAttempt;
         this.startTimeMillis = System.currentTimeMillis();
         this.scanFuture = ExternalEngine.runAsync(processHolder, stats);
     }
@@ -96,7 +106,7 @@ public class CountdownScreen extends Screen {
             client.execute(() -> waitThenCreate(client, settleTicks - 1));
         } else {
             scanFuture.thenAccept(result -> client.execute(() ->
-                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result)));
+                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result, startAttempt)));
         }
     }
 
