@@ -1,6 +1,7 @@
 package com.zayne.seedfilter.mixin;
 
 import com.zayne.seedfilter.SeedFilterMod;
+import com.zayne.seedfilter.gui.SeedBankScanScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -35,6 +36,11 @@ public abstract class MixinTitleScreen extends Screen {
 
         this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS, button ->
                 SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this)));
+
+        // Directly below the search-and-join button: the seed bank's "find and save, don't join"
+        // mode - keeps searching indefinitely and stacking matches instead of stopping at one.
+        this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.CHEST, button ->
+                MinecraftClient.getInstance().openScreen(new SeedBankScanScreen((Screen) (Object) this))));
     }
 
     private static class IconButton extends ButtonWidget {

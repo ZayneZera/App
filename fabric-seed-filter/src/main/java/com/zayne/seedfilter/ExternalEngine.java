@@ -152,6 +152,10 @@ public class ExternalEngine {
         return getEngineDir().resolve("seedfilter.cfg");
     }
 
+    public static Path getSeedBankPath() {
+        return getEngineDir().resolve("seedbank.json");
+    }
+
     public static boolean isInstalled() {
         return Files.isRegularFile(getExePath());
     }
