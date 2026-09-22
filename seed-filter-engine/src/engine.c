@@ -126,7 +126,7 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
         if (cfg->ruinedPortalFrameCheck) {
             int biomeID = getBiomeAt(&gOverworld, 4, portalPos.x >> 2, 0, portalPos.z >> 2);
             int32_t airCount = 0;
-            if (!rp_checkFrame(&gOverworld, seed, biomeID, portalPos.x >> 4, portalPos.z >> 4, &airCount)) {
+            if (!rp_checkFrame(&gOverworld, seed, biomeID, portalPos.x, portalPos.z, &airCount)) {
                 return 0;
             }
             if (airCount > rpLoot.obsidian) return 0;

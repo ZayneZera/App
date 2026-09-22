@@ -4,8 +4,10 @@
 #include <stdint.h>
 #include "generator.h"
 
-/* Attempts to verify whether the Ruined Portal found at portalChunkX/Z has a completable frame:
- * all of its non-corner border positions must be Air or Obsidian (never Crying Obsidian).
+/* Attempts to verify whether the Ruined Portal found at portalX/Z (the raw block position
+ * returned by cubiomes' getStructurePos - NOT rounded/re-derived to a chunk center, that was an
+ * earlier bug here that shifted every frame position) has a completable frame: all of its
+ * non-corner border positions must be Air or Obsidian (never Crying Obsidian).
  *
  * Returns 1 and fills *outAirCount (the number of those border positions that are Air - the
  * caller compares this against the chest's obsidian count) if the frame was checkable and free
@@ -20,13 +22,12 @@
  *     air (properties.airPocket == false) - we have no real terrain block data to check what's
  *     actually there, so we don't guess.
  *
- * Two approximations, accepted after discussion: the world seed's terrain surface height is
- * sourced from cubiomes' mapApproxHeight() rather than vanilla's exact block-level heightmap scan
- * (chunkGenerator.getHeight() + getColumnSample()), and the height/terrain-sample point is taken
- * as the portal's chunk-center rather than its exact (rotation/mirror-dependent) bounding-box
- * center. Both can shift the portal's placement Y by a small amount, which in turn changes every
- * per-block Crying-Obsidian roll (those are seeded from the exact world position) - so results
- * here are a best-effort approximation, not bit-exact like the loot table filters. */
-int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, int32_t portalChunkX, int32_t portalChunkZ, int32_t *outAirCount);
+ * One approximation remains, accepted after discussion: the world seed's terrain surface height
+ * is sourced from cubiomes' mapApproxHeight() rather than vanilla's exact block-level heightmap
+ * scan (chunkGenerator.getHeight() + getColumnSample()). This can shift the portal's placement Y
+ * by a small amount, which in turn changes every per-block Crying-Obsidian roll (those are seeded
+ * from the exact world position) - so results here are a best-effort approximation, not bit-exact
+ * like the loot table filters. */
+int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, int32_t portalX, int32_t portalZ, int32_t *outAirCount);
 
 #endif

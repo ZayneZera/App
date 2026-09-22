@@ -90,7 +90,10 @@ static int classifyPortalType(int biomeID) {
     }
 }
 
-int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, int32_t portalChunkX, int32_t portalChunkZ, int32_t *outAirCount) {
+int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, int32_t portalX, int32_t portalZ, int32_t *outAirCount) {
+    int32_t portalChunkX = portalX >> 4;
+    int32_t portalChunkZ = portalZ >> 4;
+
     uint64_t rnd;
     mc_setCarverSeed(&rnd, worldSeed, portalChunkX, portalChunkZ);
 
@@ -152,8 +155,14 @@ int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, 
 
     int32_t pivotX = tpl->sizeX / 2;
     int32_t pivotZ = tpl->sizeZ / 2;
-    int32_t chunkCenterX = portalChunkX * 16 + 8;
-    int32_t chunkCenterZ = portalChunkZ * 16 + 8;
+    /* This is the vanilla piece's placement origin (this.pos) X/Z directly - verified against a
+     * real chest position in-game. Earlier this was (wrongly) re-derived as chunk*16+8 ("chunk
+     * center"), which shifted every frame block by several blocks and desynced the Crying
+     * Obsidian rolls entirely - portalX/portalZ (cubiomes' raw getStructurePos result) IS already
+     * the right reference point, matching RuinedPortalFeature.Start.init()'s
+     * ChunkPos(i,j).getCenterBlockPos() call (whatever that returns, cubiomes' pos equals it). */
+    int32_t chunkCenterX = portalX;
+    int32_t chunkCenterZ = portalZ;
 
     /* Vanilla scans downward from the initial terrain height and stops at the first Y where at
      * least 3 of the structure box's 4 corners have solid ground (a heightmap-predicate check we
