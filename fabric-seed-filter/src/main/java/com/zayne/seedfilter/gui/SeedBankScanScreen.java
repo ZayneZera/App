@@ -86,6 +86,9 @@ public class SeedBankScanScreen extends Screen {
             ExternalEngine.cancel(processHolder);
             this.client.openScreen(this.parent);
         }));
+        this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 154, 150, 20,
+                new LiteralText("Seedbank ansehen"), button ->
+                        this.client.openScreen(new SeedBankBrowseScreen(this))));
     }
 
     @Override
