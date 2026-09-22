@@ -33,8 +33,11 @@ public final class RuinedPortalVerifier {
      * portal placement for this seed - matches the "only when I have the check enabled" ask. */
     public static void verifyAndAnnounce(MinecraftClient client, ExternalEngine.Result result, SeedFilterConfig config) {
         if (!config.ruinedPortalFrameCheck || !result.rpFound) {
+            LOGGER.info("Ruined Portal verification skipped: frameCheck={} rpFound={}", config.ruinedPortalFrameCheck, result.rpFound);
             return;
         }
+        LOGGER.info("Ruined Portal verification starting: portal=({},{}) template={} rotation={} mirror={} chestObsidian={}",
+                result.rpPortalX, result.rpPortalZ, result.rpTemplateIndex, result.rpRotation, result.rpMirror, result.rpChestObsidian);
         pollUntilReady(client, result, 5);
     }
 
@@ -58,6 +61,7 @@ public final class RuinedPortalVerifier {
             ServerWorld world = server.getWorld(World.OVERWORLD);
             RuinedPortalTemplates.Template template = RuinedPortalTemplates.byCommonIndex(result.rpTemplateIndex);
             if (world == null || template == null) {
+                sendErrorMessage(client, "world=" + world + " template=" + template + " (templateIndex=" + result.rpTemplateIndex + ")");
                 return;
             }
 
@@ -103,7 +107,17 @@ public final class RuinedPortalVerifier {
             sendResultMessage(client, approved, cryingFound, airCount, result.rpChestObsidian);
         } catch (Exception e) {
             LOGGER.warn("Ruined Portal frame verification failed", e);
+            sendErrorMessage(client, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    private static void sendErrorMessage(MinecraftClient client, String detail) {
+        client.execute(() -> {
+            if (client.player != null) {
+                client.player.sendMessage(new LiteralText("§c[SeedFilter] Ruined Portal check failed: " + detail)
+                        .formatted(Formatting.RED), false);
+            }
+        });
     }
 
     private static void sendResultMessage(MinecraftClient client, boolean approved, boolean cryingFound, int airCount, int chestObsidian) {
