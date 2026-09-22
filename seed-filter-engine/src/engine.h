@@ -10,6 +10,17 @@ typedef struct {
     int spawnZ;
     int enableCheats;
     int creativeMode;
+
+    /* Only meaningful when cfg->ruinedPortalEnabled && cfg->ruinedPortalFrameCheck: the found
+     * portal's placement, for the mod to do a real (non-approximated) in-game completability
+     * check once the player is teleported in - see frame.h. rpFound is 0 if frame check is off
+     * or the portal isn't in a checkable placement/template. */
+    int rpFound;
+    int rpPortalX, rpPortalZ;
+    int rpTemplateIndex, rpRotation, rpMirror;
+    int rpChestObsidian; /* from loot_ruinedPortal() - reliable (no terrain dependency) unlike the
+                            portal's placement Y, so the mod trusts this rather than trying to
+                            open/read the real (lazily-generated) chest inventory. */
 } FilterResult;
 
 /* Funnel counters, mirroring the mod's old ScanStats: "reached" = seeds that already passed

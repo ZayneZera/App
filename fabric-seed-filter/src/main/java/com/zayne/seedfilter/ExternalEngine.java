@@ -29,6 +29,13 @@ public class ExternalEngine {
         public final boolean cheats;
         public final boolean creative;
 
+        /** Only set (rpFound=true) when the exe was run with ruined_portal_frame_check=1 and the
+         * found portal rolled a checkable placement - see RuinedPortalVerifier. */
+        public boolean rpFound = false;
+        public int rpPortalX, rpPortalZ;
+        public int rpTemplateIndex, rpRotation, rpMirror;
+        public int rpChestObsidian;
+
         public Result(long seed, int spawnX, int spawnZ, boolean cheats, boolean creative) {
             this.seed = seed;
             this.spawnX = spawnX;
@@ -93,6 +100,7 @@ public class ExternalEngine {
                 Integer spawnX = null, spawnZ = null;
                 boolean cheats = false;
                 boolean creative = false;
+                Integer rpPortalX = null, rpPortalZ = null, rpTemplateIndex = null, rpRotation = null, rpMirror = null, rpChestObsidian = null;
 
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
@@ -108,6 +116,18 @@ public class ExternalEngine {
                             cheats = line.substring("Cheats:".length()).trim().equals("1");
                         } else if (line.startsWith("Creative:")) {
                             creative = line.substring("Creative:".length()).trim().equals("1");
+                        } else if (line.startsWith("RpPortalX:")) {
+                            rpPortalX = Integer.parseInt(line.substring("RpPortalX:".length()).trim());
+                        } else if (line.startsWith("RpPortalZ:")) {
+                            rpPortalZ = Integer.parseInt(line.substring("RpPortalZ:".length()).trim());
+                        } else if (line.startsWith("RpTemplateIndex:")) {
+                            rpTemplateIndex = Integer.parseInt(line.substring("RpTemplateIndex:".length()).trim());
+                        } else if (line.startsWith("RpRotation:")) {
+                            rpRotation = Integer.parseInt(line.substring("RpRotation:".length()).trim());
+                        } else if (line.startsWith("RpMirror:")) {
+                            rpMirror = Integer.parseInt(line.substring("RpMirror:".length()).trim());
+                        } else if (line.startsWith("RpChestObsidian:")) {
+                            rpChestObsidian = Integer.parseInt(line.substring("RpChestObsidian:".length()).trim());
                         } else if (line.startsWith("Progress:") && stats != null) {
                             stats.applyProgressLine(line);
                         }
@@ -122,7 +142,17 @@ public class ExternalEngine {
                 }
 
                 if (seed != null && spawnX != null && spawnZ != null) {
-                    future.complete(new Result(seed, spawnX, spawnZ, cheats, creative));
+                    Result result = new Result(seed, spawnX, spawnZ, cheats, creative);
+                    if (rpPortalX != null && rpPortalZ != null && rpTemplateIndex != null && rpRotation != null && rpMirror != null && rpChestObsidian != null) {
+                        result.rpFound = true;
+                        result.rpPortalX = rpPortalX;
+                        result.rpPortalZ = rpPortalZ;
+                        result.rpTemplateIndex = rpTemplateIndex;
+                        result.rpRotation = rpRotation;
+                        result.rpMirror = rpMirror;
+                        result.rpChestObsidian = rpChestObsidian;
+                    }
+                    future.complete(result);
                 } else {
                     future.completeExceptionally(new IOException("seedfilter.exe returned no seed (cancelled or NoMatch)"));
                 }

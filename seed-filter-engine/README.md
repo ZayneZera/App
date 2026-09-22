@@ -42,9 +42,13 @@ x86_64-w64-mingw32-gcc -O2 -std=gnu11 -Isrc -Ithird_party/cubiomes \
 - `src/loot.c/h` - resolves specific structure chest loot table criteria (buried treasure's
   TNT/diamond/iron/fish counts, ruined portal's obsidian/flint&steel/fire-charge/golden-axe counts
   and golden sword Looting level) from the world seed and the structure's chunk position.
-- `src/frame.c/h` - approximate Ruined Portal frame-completability check (Air/Obsidian at the
-  border positions, no Crying Obsidian). Only handles 7 of the 13 portal templates (the others
-  have non-standard or unclear geometry) and uses cubiomes' approximate terrain height in place of
-  real block-level terrain generation - see the caveats documented in frame.h.
+- `src/frame.c/h` - determines a Ruined Portal's template/rotation/mirror (RNG-only, no terrain
+  dependency, so this part is exact). Deliberately does NOT try to predict the portal's actual
+  block contents (Crying Obsidian, frame completability) from the seed alone anymore - that
+  requires the portal's exact placement height, which cubiomes can only approximate, and real-seed
+  testing showed that's unreliable enough to flip the verdict outright. The mod's
+  RuinedPortalVerifier does that check for real instead, once the player is actually in the
+  generated world - see frame.h for the full story. Only handles 7 of the 13 portal templates (the
+  others have non-standard or unclear geometry, see frame.h).
 - `src/main_cli.c` - headless CLI entry point (any platform) - this is what actually ships.
 - `src/gui_win32.c` - retired standalone Win32 settings GUI, not currently built.

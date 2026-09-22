@@ -70,6 +70,7 @@ public class SeedFilterMod implements ClientModInitializer {
 
         accessor.invokeCreateLevel();
         announceSpawnOffset(client, result.spawnX, result.spawnZ);
+        RuinedPortalVerifier.verifyAndAnnounce(client, result, SeedFilterConfig.load(ExternalEngine.getConfigPath()));
     }
 
     /**

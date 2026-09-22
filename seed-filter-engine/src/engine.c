@@ -93,6 +93,8 @@ static int check_bastion(Generator *gNether, uint64_t seed, int centerBlockX, in
 #define BUMP(field) do { if (stats) __sync_fetch_and_add(&stats->field, 1); } while (0)
 
 int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out, ScanStats *stats) {
+    if (out) out->rpFound = 0;
+
     Generator gOverworld;
     setupGenerator(&gOverworld, MC, 0);
     applySeed(&gOverworld, DIM_OVERWORLD, seed);
@@ -124,11 +126,19 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
 
         if (cfg->ruinedPortalFrameCheck) {
             int biomeID = getBiomeAt(&gOverworld, 4, portalPos.x >> 2, 0, portalPos.z >> 2);
-            int32_t airCount = 0;
-            if (!rp_checkFrame(&gOverworld, seed, biomeID, portalPos.x, portalPos.z, &airCount)) {
+            int templateIndex, rotation, mirror;
+            if (!rp_determinePlacement(seed, biomeID, portalPos.x, portalPos.z, &templateIndex, &rotation, &mirror)) {
                 return 0;
             }
-            if (airCount > rpLoot.obsidian) return 0;
+            if (out) {
+                out->rpFound = 1;
+                out->rpPortalX = portalPos.x;
+                out->rpPortalZ = portalPos.z;
+                out->rpTemplateIndex = templateIndex;
+                out->rpRotation = rotation;
+                out->rpMirror = mirror;
+                out->rpChestObsidian = rpLoot.obsidian;
+            }
         }
         BUMP(passedRuinedPortal);
     }

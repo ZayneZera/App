@@ -70,6 +70,14 @@ int main(int argc, char **argv) {
         printf("SpawnZ: %d\n", result.spawnZ);
         printf("Cheats: %d\n", result.enableCheats);
         printf("Creative: %d\n", result.creativeMode);
+        if (result.rpFound) {
+            printf("RpPortalX: %d\n", result.rpPortalX);
+            printf("RpPortalZ: %d\n", result.rpPortalZ);
+            printf("RpTemplateIndex: %d\n", result.rpTemplateIndex);
+            printf("RpRotation: %d\n", result.rpRotation);
+            printf("RpMirror: %d\n", result.rpMirror);
+            printf("RpChestObsidian: %d\n", result.rpChestObsidian);
+        }
         printf("Attempts: %ld\n", g_stats.attempts);
         fflush(stdout);
         return 0;
