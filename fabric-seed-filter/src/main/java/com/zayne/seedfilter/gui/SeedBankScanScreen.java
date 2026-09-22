@@ -9,6 +9,7 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.LiteralText;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -36,11 +37,6 @@ public class SeedBankScanScreen extends Screen {
     private final AtomicInteger[] perCategoryFound = new AtomicInteger[]{
             new AtomicInteger(), new AtomicInteger(), new AtomicInteger(), new AtomicInteger(), new AtomicInteger()
     };
-    private static final int[] CATEGORY_BITS = {
-            ExternalEngine.CATEGORY_VILLAGE, ExternalEngine.CATEGORY_RUINED_PORTAL,
-            ExternalEngine.CATEGORY_TREASURE, ExternalEngine.CATEGORY_BASTION, ExternalEngine.CATEGORY_FORTRESS
-    };
-    private static final String[] CATEGORY_LABELS = {"Dorf", "Ruined Portal", "Buried Treasure", "Bastion", "Fortress"};
 
     private volatile boolean stopped = false;
 
@@ -71,8 +67,8 @@ public class SeedBankScanScreen extends Screen {
             if (Integer.bitCount(entry.matchedCategories) >= 2) {
                 opFound.incrementAndGet();
             }
-            for (int i = 0; i < CATEGORY_BITS.length; i++) {
-                if ((entry.matchedCategories & CATEGORY_BITS[i]) != 0) {
+            for (int i = 0; i < CategoryStyle.BITS.length; i++) {
+                if ((entry.matchedCategories & CategoryStyle.BITS[i]) != 0) {
                     perCategoryFound[i].incrementAndGet();
                 }
             }
@@ -105,15 +101,28 @@ public class SeedBankScanScreen extends Screen {
 
         int y = this.height / 2 - 4;
         drawCenteredText(matrices, this.textRenderer,
-                new LiteralText("Gefunden: " + totalFound.get() + (opFound.get() > 0 ? "  (davon OP: " + opFound.get() + ")" : "")),
+                new LiteralText("Gefunden: " + totalFound.get()),
                 this.width / 2, y, DarkTheme.TEXT);
         y += 14;
-        for (int i = 0; i < CATEGORY_LABELS.length; i++) {
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (opFound.get() > 0) {
+            String text = "OP: " + opFound.get();
+            int textW = this.textRenderer.getWidth(text);
+            int rowX = this.width / 2 - (textW + 20) / 2;
+            client.getItemRenderer().renderGuiItemIcon(new ItemStack(CategoryStyle.OP_ICON), rowX, y - 4);
+            drawStringWithShadow(matrices, this.textRenderer, text, rowX + 20, y, 0xFFD700);
+            y += 13;
+        }
+        for (int i = 0; i < CategoryStyle.LABELS.length; i++) {
             int count = perCategoryFound[i].get();
             if (count == 0) continue;
-            drawCenteredText(matrices, this.textRenderer, new LiteralText(CATEGORY_LABELS[i] + ": " + count),
-                    this.width / 2, y, 0x77AAFF);
-            y += 11;
+            String text = CategoryStyle.LABELS[i] + ": " + count;
+            int textW = this.textRenderer.getWidth(text);
+            int rowX = this.width / 2 - (textW + 20) / 2;
+            client.getItemRenderer().renderGuiItemIcon(new ItemStack(CategoryStyle.ICONS[i]), rowX, y - 4);
+            drawStringWithShadow(matrices, this.textRenderer, text, rowX + 20, y, 0x77AAFF);
+            y += 13;
         }
 
         super.render(matrices, mouseX, mouseY, delta);

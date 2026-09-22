@@ -39,7 +39,7 @@ public abstract class MixinTitleScreen extends Screen {
 
         // Directly below the search-and-join button: the seed bank's "find and save, don't join"
         // mode - keeps searching indefinitely and stacking matches instead of stopping at one.
-        this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.CHEST, button ->
+        this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.ENDER_CHEST, button ->
                 MinecraftClient.getInstance().openScreen(new SeedBankScanScreen((Screen) (Object) this))));
     }
 

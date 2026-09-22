@@ -9,6 +9,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.LiteralText;
 
 import java.text.SimpleDateFormat;
@@ -34,12 +35,6 @@ public class SeedBankBrowseScreen extends Screen {
 
     private final List<Row> rows = new ArrayList<>();
     private int scrollOffset = 0;
-
-    private static final int[] CATEGORY_BITS = {
-            ExternalEngine.CATEGORY_VILLAGE, ExternalEngine.CATEGORY_RUINED_PORTAL,
-            ExternalEngine.CATEGORY_TREASURE, ExternalEngine.CATEGORY_BASTION, ExternalEngine.CATEGORY_FORTRESS
-    };
-    private static final String[] CATEGORY_LABELS = {"Dorf", "Ruined Portal", "Buried Treasure", "Bastion", "Fortress"};
 
     private static final class Row {
         final int y;
@@ -104,17 +99,6 @@ public class SeedBankBrowseScreen extends Screen {
         }
     }
 
-    private String categoryLabel(int matchedCategories) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < CATEGORY_BITS.length; i++) {
-            if ((matchedCategories & CATEGORY_BITS[i]) != 0) {
-                if (sb.length() > 0) sb.append(" + ");
-                sb.append(CATEGORY_LABELS[i]);
-            }
-        }
-        return sb.length() > 0 ? sb.toString() : "?";
-    }
-
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button == 0 || button == 1) {
@@ -148,7 +132,7 @@ public class SeedBankBrowseScreen extends Screen {
         this.renderBackground(matrices);
 
         String heading = historyView != null
-                ? "Historie: " + categoryLabel(historyView.key.matchedCategories)
+                ? "Historie: " + CategoryStyle.labelFor(historyView.key.matchedCategories)
                 : "Seedbank";
         drawCenteredText(matrices, this.textRenderer, new LiteralText(heading), this.width / 2, 16, 0xFFFFFF);
 
@@ -158,16 +142,20 @@ public class SeedBankBrowseScreen extends Screen {
                     this.width / 2, this.height / 2, DarkTheme.TEXT_DIM);
         }
 
+        MinecraftClient client = MinecraftClient.getInstance();
         SimpleDateFormat fmt = new SimpleDateFormat("dd.MM. HH:mm");
         for (Row row : rows) {
             if (row.y < 30 || row.y > this.height - 40) continue;
             if (row.stack != null) {
                 SeedBank.Stack stack = row.stack;
                 String opTag = stack.key.isOp() ? "§6[OP] §r" : "";
-                String text = opTag + categoryLabel(stack.key.matchedCategories) + "  —  " + stack.unused.size() + "x verfügbar"
+                String text = opTag + CategoryStyle.labelFor(stack.key.matchedCategories) + "  —  " + stack.unused.size() + "x verfügbar"
                         + (stack.used.isEmpty() ? "" : " (" + stack.used.size() + " benutzt)");
                 int color = stack.unused.isEmpty() ? DarkTheme.TEXT_DIM : 0x77AAFF;
-                drawCenteredText(matrices, this.textRenderer, new LiteralText(text), this.width / 2, row.y + 4, color);
+                int textW = this.textRenderer.getWidth(text);
+                int rowX = this.width / 2 - (textW + 18) / 2;
+                client.getItemRenderer().renderGuiItemIcon(new ItemStack(CategoryStyle.iconFor(stack.key.matchedCategories)), rowX, row.y);
+                drawStringWithShadow(matrices, this.textRenderer, text, rowX + 18, row.y + 4, color);
             } else if (row.historyEntry != null) {
                 String text = "Seed " + row.historyEntry.seed + "  —  " + fmt.format(new Date(row.historyEntry.timestampMillis));
                 drawCenteredText(matrices, this.textRenderer, new LiteralText(text), this.width / 2, row.y + 4, DarkTheme.TEXT_DIM);
