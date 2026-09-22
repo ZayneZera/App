@@ -55,6 +55,8 @@ void config_set_defaults(FilterConfig *cfg) {
     cfg->creativeMode = 0;
 
     cfg->threadCount = detect_cpu_threads();
+
+    cfg->orMode = 0;
 }
 
 static void trim(char *s) {
@@ -102,6 +104,7 @@ int config_load(FilterConfig *cfg, const char *path) {
         else if (strcmp(key, "enable_cheats") == 0) cfg->enableCheats = value;
         else if (strcmp(key, "creative_mode") == 0) cfg->creativeMode = value;
         else if (strcmp(key, "thread_count") == 0) cfg->threadCount = value;
+        else if (strcmp(key, "or_mode") == 0) cfg->orMode = value;
     }
 
     fclose(f);
@@ -135,6 +138,7 @@ int config_save(const FilterConfig *cfg, const char *path) {
     fprintf(f, "enable_cheats=%d\n", cfg->enableCheats);
     fprintf(f, "creative_mode=%d\n", cfg->creativeMode);
     fprintf(f, "thread_count=%d\n", cfg->threadCount);
+    fprintf(f, "or_mode=%d\n", cfg->orMode);
 
     fclose(f);
     return 1;

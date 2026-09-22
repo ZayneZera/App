@@ -78,6 +78,7 @@ int main(int argc, char **argv) {
             printf("RpMirror: %d\n", result.rpMirror);
             printf("RpChestObsidian: %d\n", result.rpChestObsidian);
         }
+        printf("MatchedCategories: %d\n", result.matchedCategories);
         printf("Attempts: %ld\n", g_stats.attempts);
         fflush(stdout);
         return 0;

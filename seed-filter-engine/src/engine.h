@@ -21,6 +21,13 @@ typedef struct {
     int rpChestObsidian; /* from loot_ruinedPortal() - reliable (no terrain dependency) unlike the
                             portal's placement Y, so the mod trusts this rather than trying to
                             open/read the real (lazily-generated) chest inventory. */
+
+    /* Bitwise-OR of the CATEGORY_* flags (config.h) for every enabled top-level category this
+     * seed actually passed. In AND mode (cfg->orMode == 0) this is always exactly the full set of
+     * enabled categories (nothing else would have matched). In OR mode it can be any non-empty
+     * subset - more than one bit set means the seed satisfies multiple independently, which is
+     * what the mod's seed bank uses to tag a seed "OP". */
+    int matchedCategories;
 } FilterResult;
 
 /* Funnel counters, mirroring the mod's old ScanStats: "reached" = seeds that already passed
