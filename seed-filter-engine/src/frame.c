@@ -70,7 +70,7 @@ static const RPTemplate *findTemplate(int commonIndex) {
 }
 
 enum { RPTYPE_STANDARD, RPTYPE_DESERT, RPTYPE_JUNGLE, RPTYPE_SWAMP, RPTYPE_MOUNTAIN, RPTYPE_OCEAN };
-enum { VP_SURFACE, VP_PARTLY_BURIED, VP_IN_MOUNTAIN, VP_UNDERGROUND };
+enum { VP_LAND_SURFACE, VP_OCEAN_FLOOR, VP_PARTLY_BURIED, VP_IN_MOUNTAIN, VP_UNDERGROUND };
 
 static int classifyPortalType(int biomeID) {
     switch (biomeID) {
@@ -104,28 +104,38 @@ int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, 
             break;
         case RPTYPE_JUNGLE:
             airPocket = nextFloat(&rnd) < 0.5F;
-            verticalPlacement = VP_SURFACE;
+            verticalPlacement = VP_LAND_SURFACE;
             break;
         case RPTYPE_SWAMP:
             airPocket = 0;
-            verticalPlacement = VP_SURFACE;
+            verticalPlacement = VP_OCEAN_FLOOR;
             break;
         case RPTYPE_MOUNTAIN: {
             int bl = nextFloat(&rnd) < 0.5F;
-            verticalPlacement = bl ? VP_IN_MOUNTAIN : VP_SURFACE;
+            verticalPlacement = bl ? VP_IN_MOUNTAIN : VP_LAND_SURFACE;
             airPocket = bl || (nextFloat(&rnd) < 0.5F);
             break;
         }
         case RPTYPE_OCEAN:
             airPocket = 0;
-            verticalPlacement = VP_SURFACE;
+            verticalPlacement = VP_OCEAN_FLOOR;
             break;
         default: { /* STANDARD */
             int bl = nextFloat(&rnd) < 0.5F;
-            verticalPlacement = bl ? VP_UNDERGROUND : VP_SURFACE;
+            verticalPlacement = bl ? VP_UNDERGROUND : VP_LAND_SURFACE;
             airPocket = bl || (nextFloat(&rnd) < 0.5F);
             break;
         }
+    }
+
+    /* Requested/accepted restriction: only accept portals actually exposed on land at the
+     * surface, never underground/in-mountain/partly-buried/underwater. This both matches what
+     * the user wants (a portal they can actually walk up to right away) and sidesteps the much
+     * larger height-approximation error those placements would otherwise have (their Y range
+     * depends on a random draw over a potentially huge depth span, whereas ON_LAND_SURFACE's
+     * height comes directly from the (approximated) terrain height with no extra randomness). */
+    if (verticalPlacement != VP_LAND_SURFACE) {
+        return 0;
     }
 
     if (nextFloat(&rnd) < 0.05F) {
@@ -145,32 +155,41 @@ int rp_checkFrame(const Generator *gOverworld, uint64_t worldSeed, int biomeID, 
     int32_t chunkCenterX = portalChunkX * 16 + 8;
     int32_t chunkCenterZ = portalChunkZ * 16 + 8;
 
+    /* Vanilla scans downward from the initial terrain height and stops at the first Y where at
+     * least 3 of the structure box's 4 corners have solid ground (a heightmap-predicate check we
+     * can't replicate without real block data). Since that predicate is true for a corner at every
+     * Y at or below its own terrain surface and false above it, "at least 3 of 4 corners satisfy"
+     * is equivalent to taking the 3rd-highest (2nd-lowest) of the 4 corners' own terrain heights -
+     * so we approximate each corner's height via mapApproxHeight and use that order statistic,
+     * rather than a single center-point sample (which is what caused visibly wrong placements). */
     SurfaceNoise sn;
     initSurfaceNoise(&sn, DIM_OVERWORLD, worldSeed);
-    float approxY;
-    int approxId;
-    mapApproxHeight(&approxY, &approxId, gOverworld, &sn, chunkCenterX >> 2, chunkCenterZ >> 2, 1, 1);
-    int32_t m = (int32_t)approxY - 1;
 
-    int32_t n;
-    switch (verticalPlacement) {
-        case VP_PARTLY_BURIED:
-            n = m - tpl->sizeY + (nextInt(&rnd, 8 - 2 + 1) + 2);
-            break;
-        case VP_IN_MOUNTAIN: {
-            int32_t l = m - tpl->sizeY;
-            n = (70 < l) ? (nextInt(&rnd, l - 70 + 1) + 70) : l;
-            break;
-        }
-        case VP_UNDERGROUND: {
-            int32_t l = m - tpl->sizeY;
-            n = (15 < l) ? (nextInt(&rnd, l - 15 + 1) + 15) : l;
-            break;
-        }
-        default: /* VP_SURFACE */
-            n = m;
-            break;
+    int32_t localCornersX[4] = {0, tpl->sizeX - 1, 0, tpl->sizeX - 1};
+    int32_t localCornersZ[4] = {0, 0, tpl->sizeZ - 1, tpl->sizeZ - 1};
+    int32_t cornerHeights[4];
+    for (int i = 0; i < 4; i++) {
+        int32_t tx, ty, tz;
+        mc_transformAround(localCornersX[i], 0, localCornersZ[i], mirror, rotation, pivotX, pivotZ, &tx, &ty, &tz);
+        int32_t wx = tx + chunkCenterX;
+        int32_t wz = tz + chunkCenterZ;
+        float approxY;
+        int approxId;
+        mapApproxHeight(&approxY, &approxId, gOverworld, &sn, wx >> 2, wz >> 2, 1, 1);
+        cornerHeights[i] = (int32_t)approxY - 1;
     }
+    /* sort descending (4 elements, plain insertion sort) */
+    for (int i = 1; i < 4; i++) {
+        int32_t key = cornerHeights[i];
+        int j = i - 1;
+        while (j >= 0 && cornerHeights[j] < key) {
+            cornerHeights[j + 1] = cornerHeights[j];
+            j--;
+        }
+        cornerHeights[j + 1] = key;
+    }
+    int32_t n = cornerHeights[2]; /* 3rd-highest = 2nd-lowest */
+    if (n < 15) n = 15;
 
     int32_t airCount = 0;
     for (int i = 0; i < tpl->cellCount; i++) {
