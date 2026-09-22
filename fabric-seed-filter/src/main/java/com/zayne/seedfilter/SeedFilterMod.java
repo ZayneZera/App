@@ -8,9 +8,11 @@ import com.zayne.seedfilter.util.WorldNaming;
 import net.fabricmc.api.ClientModInitializer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.TitleScreen;
 import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.client.gui.screen.world.MoreOptionsDialog;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.GameMode;
 import org.apache.logging.log4j.LogManager;
@@ -50,7 +52,16 @@ public class SeedFilterMod implements ClientModInitializer {
         });
     }
 
+    /** Max automatic re-searches after a "Not Approved" Ruined Portal verdict before giving up
+     * and just leaving the player on the last (unapproved) seed - guards against looping forever
+     * if a truly completable portal is rare for the configured criteria. */
+    private static final int MAX_RP_RETRY_ATTEMPTS = 30;
+
     public static void createAndJoin(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result) {
+        createAndJoin(client, titleScreen, result, 1);
+    }
+
+    private static void createAndJoin(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result, int attempt) {
         CreateWorldScreen screen = new CreateWorldScreen(titleScreen);
         client.openScreen(screen);
 
@@ -70,7 +81,50 @@ public class SeedFilterMod implements ClientModInitializer {
 
         accessor.invokeCreateLevel();
         announceSpawnOffset(client, result.spawnX, result.spawnZ);
-        RuinedPortalVerifier.verifyAndAnnounce(client, result, SeedFilterConfig.load(ExternalEngine.getConfigPath()));
+        RuinedPortalVerifier.verifyAndAnnounce(client, result, SeedFilterConfig.load(ExternalEngine.getConfigPath()),
+                () -> retryForNewSeed(client, titleScreen, attempt));
+    }
+
+    /** Called when RuinedPortalVerifier comes back "Not Approved" - disconnects from the
+     * just-created (unusable) world and automatically starts a fresh search, looping until an
+     * actually-completable portal is found or MAX_RP_RETRY_ATTEMPTS is hit. */
+    private static void retryForNewSeed(MinecraftClient client, Screen titleScreen, int previousAttempt) {
+        int attempt = previousAttempt + 1;
+        if (attempt > MAX_RP_RETRY_ATTEMPTS) {
+            client.execute(() -> {
+                if (client.player != null) {
+                    client.player.sendMessage(new LiteralText("§c[SeedFilter] Kein completables Ruined Portal nach "
+                            + MAX_RP_RETRY_ATTEMPTS + " Versuchen gefunden - breche ab.").formatted(Formatting.RED), false);
+                }
+            });
+            return;
+        }
+        client.execute(() -> {
+            if (client.player != null) {
+                client.player.sendMessage(new LiteralText("§7[SeedFilter] Nicht completable, suche weiter... (Versuch "
+                        + attempt + ")").formatted(Formatting.GRAY), false);
+            }
+            if (client.world != null) {
+                client.world.disconnect();
+            }
+            client.disconnect(new TitleScreen());
+            waitThenRetry(client, titleScreen, attempt, 3);
+        });
+    }
+
+    private static void waitThenRetry(MinecraftClient client, Screen titleScreen, int attempt, int settleTicks) {
+        if (client.world != null) {
+            client.execute(() -> waitThenRetry(client, titleScreen, attempt, settleTicks));
+        } else if (settleTicks > 0) {
+            client.execute(() -> waitThenRetry(client, titleScreen, attempt, settleTicks - 1));
+        } else {
+            ExternalEngine.runAsync(new AtomicReference<>(), null).thenAccept(result ->
+                    client.execute(() -> createAndJoin(client, titleScreen, result, attempt))
+            ).exceptionally(error -> {
+                LOGGER.warn("Retry seed search did not produce a result", error);
+                return null;
+            });
+        }
     }
 
     /**

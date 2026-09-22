@@ -28,33 +28,36 @@ public final class RuinedPortalVerifier {
     private static final Logger LOGGER = LogManager.getLogger("seed-filter");
 
     /** Only does anything if config.ruinedPortalFrameCheck is on and the exe found a checkable
-     * portal placement for this seed - matches the "only when I have the check enabled" ask. */
-    public static void verifyAndAnnounce(MinecraftClient client, ExternalEngine.Result result, SeedFilterConfig config) {
+     * portal placement for this seed - matches the "only when I have the check enabled" ask.
+     * onNotApproved is invoked (on the client thread) only when the check actually runs to
+     * completion and comes back "Not Approved" - not on the "Approved" case, and not on any
+     * error/exception path, so a broken check never silently triggers an endless retry loop. */
+    public static void verifyAndAnnounce(MinecraftClient client, ExternalEngine.Result result, SeedFilterConfig config, Runnable onNotApproved) {
         if (!config.ruinedPortalFrameCheck || !result.rpFound) {
             LOGGER.info("Ruined Portal verification skipped: frameCheck={} rpFound={}", config.ruinedPortalFrameCheck, result.rpFound);
             return;
         }
         LOGGER.info("Ruined Portal verification starting: portal=({},{}) template={} rotation={} mirror={} chestObsidian={}",
                 result.rpPortalX, result.rpPortalZ, result.rpTemplateIndex, result.rpRotation, result.rpMirror, result.rpChestObsidian);
-        pollUntilReady(client, result, 5);
+        pollUntilReady(client, result, 5, onNotApproved);
     }
 
-    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, int settleTicks) {
+    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, int settleTicks, Runnable onNotApproved) {
         client.execute(() -> {
             if (client.player == null || client.getServer() == null) {
-                pollUntilReady(client, result, settleTicks);
+                pollUntilReady(client, result, settleTicks, onNotApproved);
                 return;
             }
             if (settleTicks > 0) {
-                pollUntilReady(client, result, settleTicks - 1);
+                pollUntilReady(client, result, settleTicks - 1, onNotApproved);
                 return;
             }
             MinecraftServer server = client.getServer();
-            server.execute(() -> runCheckOnServerThread(client, server, result));
+            server.execute(() -> runCheckOnServerThread(client, server, result, onNotApproved));
         });
     }
 
-    private static void runCheckOnServerThread(MinecraftClient client, MinecraftServer server, ExternalEngine.Result result) {
+    private static void runCheckOnServerThread(MinecraftClient client, MinecraftServer server, ExternalEngine.Result result, Runnable onNotApproved) {
         try {
             ServerWorld world = server.getWorld(World.OVERWORLD);
             RuinedPortalTemplates.Template template = RuinedPortalTemplates.byCommonIndex(result.rpTemplateIndex);
@@ -110,7 +113,7 @@ public final class RuinedPortalVerifier {
             }
 
             boolean approved = !cryingFound && airCount <= result.rpChestObsidian;
-            sendResultMessage(client, approved, cryingFound, airCount, result.rpChestObsidian);
+            sendResultMessage(client, approved, cryingFound, airCount, result.rpChestObsidian, onNotApproved);
         } catch (Exception e) {
             LOGGER.warn("Ruined Portal frame verification failed", e);
             sendErrorMessage(client, e.getClass().getSimpleName() + ": " + e.getMessage());
@@ -126,7 +129,7 @@ public final class RuinedPortalVerifier {
         });
     }
 
-    private static void sendResultMessage(MinecraftClient client, boolean approved, boolean cryingFound, int airCount, int chestObsidian) {
+    private static void sendResultMessage(MinecraftClient client, boolean approved, boolean cryingFound, int airCount, int chestObsidian, Runnable onNotApproved) {
         client.execute(() -> {
             if (client.player == null) {
                 return;
@@ -140,6 +143,9 @@ public final class RuinedPortalVerifier {
                         : ("nicht genug Obsidian (" + chestObsidian + " in Chest, " + airCount + " Lücken)");
                 client.player.sendMessage(new LiteralText("§c[SeedFilter] Ruined Portal: Not Approved (" + reason + ")")
                         .formatted(Formatting.RED), false);
+                if (onNotApproved != null) {
+                    onNotApproved.run();
+                }
             }
         });
     }
