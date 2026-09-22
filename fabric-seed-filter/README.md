@@ -20,7 +20,7 @@ cd fabric-seed-filter
 .\gradlew.bat build
 ```
 
-Fertige jar liegt danach in `build\libs\`.
+`build` deployt die fertige jar jetzt automatisch direkt in den MCSR-PrismLauncher-`mods`-Ordner (siehe `deployToMcsrMods` in `build.gradle`) - kein manuelles Kopieren mehr nötig. Der vorher dort liegende Build wird dabei nicht einfach überschrieben, sondern vorher nach `build\libs\` verschoben (Rotations-Backup, eine Version tief).
 
 ## Bekannte Risiken für den ersten Build
 
