@@ -39,28 +39,31 @@ public final class RuinedPortalVerifier {
         }
         LOGGER.info("Ruined Portal verification starting: portal=({},{}) template={} rotation={} mirror={} chestObsidian={}",
                 result.rpPortalX, result.rpPortalZ, result.rpTemplateIndex, result.rpRotation, result.rpMirror, result.rpChestObsidian);
-        pollUntilReady(client, result, 5, onNotApproved, 0);
+        pollUntilReady(client, result, onNotApproved);
     }
 
-    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, int settleTicks, Runnable onNotApproved, int pollCount) {
-        client.execute(() -> {
+    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, Runnable onNotApproved) {
+        int[] settleTicks = {5};
+        int[] pollCount = {0};
+        TickPoller.poll(() -> {
             if (client.player == null || client.getServer() == null) {
                 // One-shot warning if still waiting after ~10s (200 ticks) - pins down whether a
                 // "Nächster Seed" run that never shows Approved/Not Approved is stuck polling here
                 // (this fires) vs never reaching verifyAndAnnounce at all (createAndJoin's own log
                 // markers would be missing instead).
-                if (pollCount == 200) {
+                if (pollCount[0] == 200) {
                     LOGGER.warn("RuinedPortalVerifier: still waiting for client.player/getServer() after 200 polls");
                 }
-                pollUntilReady(client, result, settleTicks, onNotApproved, pollCount + 1);
-                return;
+                pollCount[0]++;
+                return false;
             }
-            if (settleTicks > 0) {
-                pollUntilReady(client, result, settleTicks - 1, onNotApproved, pollCount + 1);
-                return;
+            if (settleTicks[0] > 0) {
+                settleTicks[0]--;
+                return false;
             }
             MinecraftServer server = client.getServer();
             server.execute(() -> runCheckOnServerThread(client, server, result, onNotApproved));
+            return true;
         });
     }
 

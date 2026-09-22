@@ -5,6 +5,7 @@ import com.zayne.seedfilter.ExternalEngine;
 import com.zayne.seedfilter.ProbabilityEstimator;
 import com.zayne.seedfilter.SeedFilterConfig;
 import com.zayne.seedfilter.SeedFilterMod;
+import com.zayne.seedfilter.TickPoller;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.TitleScreen;
@@ -99,15 +100,20 @@ public class CountdownScreen extends Screen {
         }
     }
 
-    private void waitThenCreate(MinecraftClient client, int settleTicks) {
-        if (client.world != null) {
-            client.execute(() -> waitThenCreate(client, settleTicks));
-        } else if (settleTicks > 0) {
-            client.execute(() -> waitThenCreate(client, settleTicks - 1));
-        } else {
+    private void waitThenCreate(MinecraftClient client, int settleTicksStart) {
+        int[] settleTicks = {settleTicksStart};
+        TickPoller.poll(() -> {
+            if (client.world != null) {
+                return false;
+            }
+            if (settleTicks[0] > 0) {
+                settleTicks[0]--;
+                return false;
+            }
             scanFuture.thenAccept(result -> client.execute(() ->
                     SeedFilterMod.createAndJoin(client, new TitleScreen(), result, startAttempt)));
-        }
+            return true;
+        });
     }
 
     @Override

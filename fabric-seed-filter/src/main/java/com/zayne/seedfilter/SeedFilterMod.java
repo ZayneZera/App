@@ -178,24 +178,23 @@ public class SeedFilterMod implements ClientModInitializer {
      * more manual F3 comparison needed.
      */
     private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ) {
-        announceSpawnOffset(client, calcX, calcZ, 10, 0);
-    }
-
-    private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ, int settleTicks, int pollCount) {
-        client.execute(() -> {
+        int[] settleTicks = {10};
+        int[] pollCount = {0};
+        TickPoller.poll(() -> {
             if (client.player == null) {
                 // A one-shot warning if this is still waiting after ~10s (200 ticks) - if the
                 // "Nächster Seed" no-spawn-offset report is this poll never resolving rather than
                 // never starting, this pins that down without spamming a log line every tick.
-                if (pollCount == 200) {
+                if (pollCount[0] == 200) {
                     LOGGER.warn("announceSpawnOffset: still waiting for client.player after 200 polls");
                 }
-                announceSpawnOffset(client, calcX, calcZ, settleTicks, pollCount + 1);
-                return;
+                pollCount[0]++;
+                return false;
             }
-            if (settleTicks > 0) {
-                announceSpawnOffset(client, calcX, calcZ, settleTicks - 1, pollCount + 1);
-                return;
+            if (settleTicks[0] > 0) {
+                settleTicks[0]--;
+                pollCount[0]++;
+                return false;
             }
             BlockPos pos = client.player.getBlockPos();
             int dx = Math.abs(pos.getX() - calcX);
@@ -203,6 +202,7 @@ public class SeedFilterMod implements ClientModInitializer {
             int total = dx + dz;
             client.player.sendMessage(new LiteralText(
                     "§e[SeedFilter] Calculated Offset: " + dx + " + " + dz + " = " + total + " Blöcke"), false);
+            return true;
         });
     }
 }
