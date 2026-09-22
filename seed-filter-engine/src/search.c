@@ -11,19 +11,32 @@ typedef struct {
     ScanStats *stats;
     volatile int *cancelFlag;
     atomic_int *foundFlag;
-    unsigned int seedSeed;
+    uint64_t seedSeed;
 } WorkerArgs;
+
+/* Bumped once per engine_search() call (see below) and mixed into each worker's starting state.
+ * Needed because the seed bank's repeat-search mode calls engine_search() back-to-back in a tight
+ * loop, spawning brand new threads each time - a fresh thread's stack often gets allocated at the
+ * exact same address as the last one's did, and time(NULL) only has 1-second resolution, so
+ * without this a worker's "random" starting xorshift state (and therefore its entire seed
+ * sequence) could come out byte-for-byte identical run to run, which is exactly what happened in
+ * testing: the same couple of seeds kept coming back instead of new ones. */
+static atomic_ulong g_searchGeneration = 0;
 
 static void *worker(void *argPtr) {
     WorkerArgs *args = (WorkerArgs *) argPtr;
-    unsigned int rngState = args->seedSeed;
+    uint64_t rngState = args->seedSeed;
 
     while (!*args->cancelFlag && !atomic_load(args->foundFlag)) {
         /* xorshift64* for a fast, thread-local 64-bit seed stream (uniqueness across threads
          * only needs distinct starting state, not cryptographic quality). */
         static _Thread_local uint64_t xstate = 0;
         if (xstate == 0) {
-            xstate = ((uint64_t) rngState << 32) ^ (uint64_t) time(NULL) ^ (uint64_t) (uintptr_t) &xstate;
+            struct timespec ts;
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            xstate = rngState ^ ((uint64_t) ts.tv_sec << 32) ^ (uint64_t) ts.tv_nsec
+                     ^ (uint64_t) (uintptr_t) &xstate;
+            if (xstate == 0) xstate = 0x9E3779B97F4A7C15ULL; /* xorshift can't start at 0 */
         }
         xstate ^= xstate << 13;
         xstate ^= xstate >> 7;
@@ -51,6 +64,7 @@ int engine_search(const FilterConfig *cfg, FilterResult *out, ScanStats *stats, 
     pthread_t *threads = malloc(sizeof(pthread_t) * threadCount);
     WorkerArgs *args = malloc(sizeof(WorkerArgs) * threadCount);
     atomic_int foundFlag = 0;
+    uint64_t generation = atomic_fetch_add(&g_searchGeneration, 1);
 
     for (int i = 0; i < threadCount; i++) {
         args[i].cfg = cfg;
@@ -58,7 +72,7 @@ int engine_search(const FilterConfig *cfg, FilterResult *out, ScanStats *stats, 
         args[i].stats = stats;
         args[i].cancelFlag = cancelFlag;
         args[i].foundFlag = &foundFlag;
-        args[i].seedSeed = (unsigned int) (i * 2654435761u + 1);
+        args[i].seedSeed = ((uint64_t) i * 2654435761ULL + 1) ^ (generation * 0x2545F4914F6CDD1DULL);
         pthread_create(&threads[i], NULL, worker, &args[i]);
     }
 
