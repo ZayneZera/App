@@ -8,6 +8,7 @@ typedef struct {
     int ruinedPortalEnabled;
     int ruinedPortalMaxChunks;
     int ruinedPortalRequireLootingSword;
+    int ruinedPortalFrameCheck;          /* approximate - see frame.h for caveats */
 
     int buriedTreasureEnabled;
     int buriedTreasureMaxChunks;

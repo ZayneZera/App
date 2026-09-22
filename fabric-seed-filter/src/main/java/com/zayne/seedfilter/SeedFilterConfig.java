@@ -18,6 +18,7 @@ public class SeedFilterConfig {
     public boolean ruinedPortalEnabled = true;
     public int ruinedPortalMaxChunks = 5;
     public boolean ruinedPortalLootingSword = false;
+    public boolean ruinedPortalFrameCheck = false;
 
     public boolean buriedTreasureEnabled = true;
     public int buriedTreasureMaxChunks = 4;
@@ -70,6 +71,7 @@ public class SeedFilterConfig {
             case "ruined_portal_enabled": ruinedPortalEnabled = value != 0; break;
             case "ruined_portal_max_chunks": ruinedPortalMaxChunks = value; break;
             case "ruined_portal_looting_sword": ruinedPortalLootingSword = value != 0; break;
+            case "ruined_portal_frame_check": ruinedPortalFrameCheck = value != 0; break;
             case "buried_treasure_enabled": buriedTreasureEnabled = value != 0; break;
             case "buried_treasure_max_chunks": buriedTreasureMaxChunks = value; break;
             case "buried_treasure_min_tnt": buriedTreasureMinTnt = value; break;
@@ -102,6 +104,7 @@ public class SeedFilterConfig {
             lines.add("ruined_portal_enabled=" + bit(ruinedPortalEnabled));
             lines.add("ruined_portal_max_chunks=" + ruinedPortalMaxChunks);
             lines.add("ruined_portal_looting_sword=" + bit(ruinedPortalLootingSword));
+            lines.add("ruined_portal_frame_check=" + bit(ruinedPortalFrameCheck));
             lines.add("buried_treasure_enabled=" + bit(buriedTreasureEnabled));
             lines.add("buried_treasure_max_chunks=" + buriedTreasureMaxChunks);
             lines.add("buried_treasure_min_tnt=" + buriedTreasureMinTnt);

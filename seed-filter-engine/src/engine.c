@@ -7,6 +7,7 @@
 #include "finders.h"
 #include "generator.h"
 #include "loot.h"
+#include "frame.h"
 
 #define MC MC_1_16_1
 
@@ -121,6 +122,15 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
         loot_ruinedPortal(seed, portalPos.x >> 4, portalPos.z >> 4, &rpLoot);
         if (rpLoot.goldenAxe < 1) return 0;
         if (rpLoot.flintAndSteel < 1 && rpLoot.fireCharge < 1) return 0;
+
+        if (cfg->ruinedPortalFrameCheck) {
+            int biomeID = getBiomeAt(&gOverworld, 4, portalPos.x >> 2, 0, portalPos.z >> 2);
+            int32_t airCount = 0;
+            if (!rp_checkFrame(&gOverworld, seed, biomeID, portalPos.x >> 4, portalPos.z >> 4, &airCount)) {
+                return 0;
+            }
+            if (airCount > rpLoot.obsidian) return 0;
+        }
         BUMP(passedRuinedPortal);
     }
 

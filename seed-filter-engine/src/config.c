@@ -11,6 +11,7 @@ void config_set_defaults(FilterConfig *cfg) {
     cfg->ruinedPortalEnabled = 1;
     cfg->ruinedPortalMaxChunks = 5;
     cfg->ruinedPortalRequireLootingSword = 0;
+    cfg->ruinedPortalFrameCheck = 0;
 
     cfg->buriedTreasureEnabled = 1;
     cfg->buriedTreasureMaxChunks = 4;
@@ -62,6 +63,7 @@ int config_load(FilterConfig *cfg, const char *path) {
         else if (strcmp(key, "ruined_portal_enabled") == 0) cfg->ruinedPortalEnabled = value;
         else if (strcmp(key, "ruined_portal_max_chunks") == 0) cfg->ruinedPortalMaxChunks = value;
         else if (strcmp(key, "ruined_portal_looting_sword") == 0) cfg->ruinedPortalRequireLootingSword = value;
+        else if (strcmp(key, "ruined_portal_frame_check") == 0) cfg->ruinedPortalFrameCheck = value;
         else if (strcmp(key, "buried_treasure_enabled") == 0) cfg->buriedTreasureEnabled = value;
         else if (strcmp(key, "buried_treasure_max_chunks") == 0) cfg->buriedTreasureMaxChunks = value;
         else if (strcmp(key, "buried_treasure_min_tnt") == 0) cfg->buriedTreasureMinTnt = value;
@@ -94,6 +96,7 @@ int config_save(const FilterConfig *cfg, const char *path) {
     fprintf(f, "ruined_portal_enabled=%d\n", cfg->ruinedPortalEnabled);
     fprintf(f, "ruined_portal_max_chunks=%d\n", cfg->ruinedPortalMaxChunks);
     fprintf(f, "ruined_portal_looting_sword=%d\n", cfg->ruinedPortalRequireLootingSword);
+    fprintf(f, "ruined_portal_frame_check=%d\n", cfg->ruinedPortalFrameCheck);
     fprintf(f, "buried_treasure_enabled=%d\n", cfg->buriedTreasureEnabled);
     fprintf(f, "buried_treasure_max_chunks=%d\n", cfg->buriedTreasureMaxChunks);
     fprintf(f, "buried_treasure_min_tnt=%d\n", cfg->buriedTreasureMinTnt);

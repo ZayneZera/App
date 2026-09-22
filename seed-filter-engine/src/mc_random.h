@@ -42,6 +42,55 @@ static inline uint64_t mc_hashCodeSeed(uint64_t *seed, int32_t x, int32_t y, int
     return (uint64_t)l;
 }
 
+/* Vanilla ChunkRandom.setCarverSeed(worldSeed, chunkX, chunkZ), verified against decompiled
+ * 1.16.1 source. Seeds a structure START's own Random (StructureStart.random) - used for
+ * type/template/rotation/mirror/mossiness selection during structure placement search. This is a
+ * COMPLETELY SEPARATE stream from setPopulationSeed/setDecoratorSeed (which seeds the later
+ * chunk-decoration Random that piece.generate() draws the chest LootTableSeed from). chunkX/chunkZ
+ * here are chunk coordinates (not block coordinates) - the chunk the structure search landed on. */
+static inline uint64_t mc_setCarverSeed(uint64_t *seed, uint64_t worldSeed, int32_t chunkX, int32_t chunkZ) {
+    setSeed(seed, worldSeed);
+    uint64_t l = nextLong(seed);
+    uint64_t m = nextLong(seed);
+    uint64_t n = ((uint64_t)(int64_t)chunkX * l) ^ ((uint64_t)(int64_t)chunkZ * m) ^ worldSeed;
+    setSeed(seed, n);
+    return n;
+}
+
+/* Vanilla Structure.transformAround(pos, mirror, rotation, pivot), Y-component only ever passes
+ * through unchanged (mirror/rotation only ever affect X/Z) - verified against decompiled 1.16.1
+ * Structure.java. mirror: 0=NONE, 1=LEFT_RIGHT (unused by Ruined Portal), 2=FRONT_BACK.
+ * rotation: 0=NONE, 1=CLOCKWISE_90, 2=CLOCKWISE_180, 3=COUNTERCLOCKWISE_90 (BlockRotation's
+ * well-established vanilla declaration order since 1.13). */
+static inline void mc_transformAround(int32_t x, int32_t y, int32_t z, int mirror, int rotation,
+                                       int32_t pivotX, int32_t pivotZ, int32_t *outX, int32_t *outY, int32_t *outZ) {
+    if (mirror == 2) x = -x;       /* FRONT_BACK */
+    else if (mirror == 1) z = -z;  /* LEFT_RIGHT */
+
+    int32_t rx, rz;
+    switch (rotation) {
+        case 3: /* COUNTERCLOCKWISE_90 */
+            rx = pivotX - pivotZ + z;
+            rz = pivotX + pivotZ - x;
+            break;
+        case 1: /* CLOCKWISE_90 */
+            rx = pivotX + pivotZ - z;
+            rz = pivotZ - pivotX + x;
+            break;
+        case 2: /* CLOCKWISE_180 */
+            rx = pivotX + pivotX - x;
+            rz = pivotZ + pivotZ - z;
+            break;
+        default: /* NONE */
+            rx = x;
+            rz = z;
+            break;
+    }
+    *outX = rx;
+    *outY = y;
+    *outZ = rz;
+}
+
 /* Vanilla MathHelper.nextInt(random, min, max): inclusive integer range, used by both the loot
  * table "rolls" field (when given as a min/max object) and by the set_count function's count
  * range. Draws nothing if min >= max (matches UniformLootTableRange.next's short-circuit). */

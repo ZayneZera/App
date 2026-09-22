@@ -61,6 +61,7 @@ public class SeedFilterMenuScreen extends Screen {
         addSection("Ruined Portal", contentX, contentW, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
         addCheckboxRow(contentX, "Looting", config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.ruinedPortalMaxChunks, v -> config.ruinedPortalMaxChunks = v);
+        addCheckboxRow(contentX, "Frame-Check (approx.)", config.ruinedPortalFrameCheck, v -> config.ruinedPortalFrameCheck = v);
         addDivider(contentX, contentW);
 
         addSection("Village", contentX, contentW, config.villageEnabled, v -> config.villageEnabled = v);
