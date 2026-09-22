@@ -39,17 +39,24 @@ public final class RuinedPortalVerifier {
         }
         LOGGER.info("Ruined Portal verification starting: portal=({},{}) template={} rotation={} mirror={} chestObsidian={}",
                 result.rpPortalX, result.rpPortalZ, result.rpTemplateIndex, result.rpRotation, result.rpMirror, result.rpChestObsidian);
-        pollUntilReady(client, result, 5, onNotApproved);
+        pollUntilReady(client, result, 5, onNotApproved, 0);
     }
 
-    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, int settleTicks, Runnable onNotApproved) {
+    private static void pollUntilReady(MinecraftClient client, ExternalEngine.Result result, int settleTicks, Runnable onNotApproved, int pollCount) {
         client.execute(() -> {
             if (client.player == null || client.getServer() == null) {
-                pollUntilReady(client, result, settleTicks, onNotApproved);
+                // One-shot warning if still waiting after ~10s (200 ticks) - pins down whether a
+                // "Nächster Seed" run that never shows Approved/Not Approved is stuck polling here
+                // (this fires) vs never reaching verifyAndAnnounce at all (createAndJoin's own log
+                // markers would be missing instead).
+                if (pollCount == 200) {
+                    LOGGER.warn("RuinedPortalVerifier: still waiting for client.player/getServer() after 200 polls");
+                }
+                pollUntilReady(client, result, settleTicks, onNotApproved, pollCount + 1);
                 return;
             }
             if (settleTicks > 0) {
-                pollUntilReady(client, result, settleTicks - 1, onNotApproved);
+                pollUntilReady(client, result, settleTicks - 1, onNotApproved, pollCount + 1);
                 return;
             }
             MinecraftServer server = client.getServer();
@@ -58,6 +65,7 @@ public final class RuinedPortalVerifier {
     }
 
     private static void runCheckOnServerThread(MinecraftClient client, MinecraftServer server, ExternalEngine.Result result, Runnable onNotApproved) {
+        LOGGER.info("Ruined Portal verification: running block checks on server thread now");
         try {
             ServerWorld world = server.getWorld(World.OVERWORLD);
             RuinedPortalTemplates.Template template = RuinedPortalTemplates.byCommonIndex(result.rpTemplateIndex);

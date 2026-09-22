@@ -82,10 +82,19 @@ public class SeedFilterMod implements ClientModInitializer {
             applyCreativeDefault(screen);
         }
 
+        // "Nächster Seed" (CountdownScreen path) was reported as never showing the spawn-offset
+        // or Ruined-Portal-verdict chat messages, while a fresh game launch (startScanAndCreate)
+        // always does - yet no exception ever showed up in logs/latest.log for the failing case,
+        // so whatever's happening isn't throwing. These markers pin down exactly how far
+        // createAndJoin gets before things go quiet, instead of guessing blind from outside.
+        LOGGER.info("createAndJoin: invoking createLevel for seed {} (attempt {})", result.seed, attempt);
         accessor.invokeCreateLevel();
+        LOGGER.info("createAndJoin: createLevel invoked, calling announceSpawnOffset");
         announceSpawnOffset(client, result.spawnX, result.spawnZ);
+        LOGGER.info("createAndJoin: calling RuinedPortalVerifier.verifyAndAnnounce");
         RuinedPortalVerifier.verifyAndAnnounce(client, result, SeedFilterConfig.load(ExternalEngine.getConfigPath()),
                 () -> retryForNewSeed(client, attempt));
+        LOGGER.info("createAndJoin: verifyAndAnnounce call returned (method itself may still be polling)");
     }
 
     /** Called when RuinedPortalVerifier comes back "Not Approved" (or can't find the portal at
@@ -169,17 +178,23 @@ public class SeedFilterMod implements ClientModInitializer {
      * more manual F3 comparison needed.
      */
     private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ) {
-        announceSpawnOffset(client, calcX, calcZ, 10);
+        announceSpawnOffset(client, calcX, calcZ, 10, 0);
     }
 
-    private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ, int settleTicks) {
+    private static void announceSpawnOffset(MinecraftClient client, int calcX, int calcZ, int settleTicks, int pollCount) {
         client.execute(() -> {
             if (client.player == null) {
-                announceSpawnOffset(client, calcX, calcZ, settleTicks);
+                // A one-shot warning if this is still waiting after ~10s (200 ticks) - if the
+                // "Nächster Seed" no-spawn-offset report is this poll never resolving rather than
+                // never starting, this pins that down without spamming a log line every tick.
+                if (pollCount == 200) {
+                    LOGGER.warn("announceSpawnOffset: still waiting for client.player after 200 polls");
+                }
+                announceSpawnOffset(client, calcX, calcZ, settleTicks, pollCount + 1);
                 return;
             }
             if (settleTicks > 0) {
-                announceSpawnOffset(client, calcX, calcZ, settleTicks - 1);
+                announceSpawnOffset(client, calcX, calcZ, settleTicks - 1, pollCount + 1);
                 return;
             }
             BlockPos pos = client.player.getBlockPos();
