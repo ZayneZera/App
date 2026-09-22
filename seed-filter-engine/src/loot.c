@@ -1,11 +1,15 @@
 #include "loot.h"
 #include "mc_random.h"
 
-/* Weighted-entry pick: mirrors vanilla LootPool.choose() - draws nextInt(totalWeight), then
- * walks entries subtracting each one's weight until the remainder goes negative. Always draws,
- * even when there's only one entry (totalWeight == its own weight) - Java's nextInt(1) still
- * consumes a sample, so skipping the draw here would desync every later pool. */
+/* Weighted-entry pick: mirrors vanilla LootPool.supplyOnce() exactly, verified against
+ * decompiled 1.16.1 source. CRITICAL: when there's only one candidate entry, vanilla returns it
+ * directly WITHOUT drawing from random at all ("if (i == 1) { ...generateLoot... } else {
+ * ...random.nextInt(totalWeight)... }") - only calls nextInt() when there are 2+ entries to
+ * choose between. Drawing unconditionally here (as an earlier version of this function did)
+ * desyncs the whole rest of the pool sequence for any pool with a single entry (e.g. buried
+ * treasure's heart_of_the_sea pool) - confirmed against a real seed's actual chest contents. */
 static int32_t pick_entry(uint64_t *seed, const int32_t *weights, int32_t count) {
+    if (count == 1) return 0;
     int32_t total = 0;
     for (int32_t i = 0; i < count; i++) total += weights[i];
     int32_t r = nextInt(seed, total);
@@ -30,8 +34,8 @@ void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Bur
     uint64_t s;
     setSeed(&s, lootTableSeed);
 
-    /* Pool 1: rolls=1 (fixed, no draw), single entry (heart_of_the_sea) - still draws for the
-     * entry pick even though there's only one choice. Nothing we track here. */
+    /* Pool 1: rolls=1 (fixed, no draw), single entry (heart_of_the_sea) - pick_entry(count=1)
+     * also draws nothing, matching vanilla exactly. Nothing we track here. */
     {
         int32_t weights[] = {1};
         pick_entry(&s, weights, 1);
