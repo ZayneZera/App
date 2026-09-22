@@ -10,9 +10,13 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.text.LiteralText;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -121,7 +125,70 @@ public class SeedBankScanScreen extends Screen {
             y += 13;
         }
 
+        renderFilterPanel(matrices);
+
         super.render(matrices, mouseX, mouseY, delta);
+    }
+
+    /** Left-side "what is this search actually doing" panel - every enabled category with its
+     * icon and key settings, the AND/OR mode, and a note about the always-on Looting side channel
+     * (see engine.c's find_looting_ruined_portal), so the settings that produced whatever shows up
+     * in the seed bank are visible right here instead of needing to reopen the settings menu. */
+    private void renderFilterPanel(MatrixStack matrices) {
+        List<Object[]> rows = new ArrayList<>(); // {Item icon (nullable), String text, int color}
+        rows.add(new Object[]{null, "Aktive Filter", DarkTheme.HEADING});
+        rows.add(new Object[]{null, config.orMode ? "Modus: ODER" : "Modus: UND", DarkTheme.TEXT_DIM});
+
+        if (config.villageEnabled) {
+            rows.add(new Object[]{Items.BELL, "Dorf: " + config.villageMaxChunks + "C", DarkTheme.TEXT});
+        }
+        if (config.ruinedPortalEnabled) {
+            String extra = config.ruinedPortalLootingSword ? " (Loot)" : "";
+            rows.add(new Object[]{Items.OBSIDIAN, "Ruined Portal: " + config.ruinedPortalMaxChunks + "C" + extra, DarkTheme.TEXT});
+        }
+        if (config.buriedTreasureEnabled) {
+            StringBuilder sb = new StringBuilder("Buried Treasure: ").append(config.buriedTreasureMaxChunks).append("C");
+            if (config.buriedTreasureMinTnt > 0) sb.append(", TNT").append(config.buriedTreasureMinTnt >= 2 ? "2+" : config.buriedTreasureMinTnt);
+            if (config.buriedTreasureDiamondFilter) sb.append(", Dia");
+            if (config.buriedTreasureIronFilter) sb.append(", Iron");
+            rows.add(new Object[]{Items.CHEST, sb.toString(), DarkTheme.TEXT});
+        }
+        if (config.bastionEnabled) {
+            StringBuilder sb = new StringBuilder("Bastion: ").append(config.bastionMaxNetherChunks).append("C ");
+            if (config.bastionAllowBridge) sb.append("B");
+            if (config.bastionAllowHousing) sb.append("H");
+            if (config.bastionAllowStables) sb.append("S");
+            if (config.bastionAllowTreasure) sb.append("T");
+            rows.add(new Object[]{Items.BLACKSTONE, sb.toString(), DarkTheme.TEXT});
+        }
+        if (config.fortressEnabled) {
+            rows.add(new Object[]{Items.NETHER_BRICKS, "Fortress: " + config.fortressMaxNetherChunks + "C", DarkTheme.TEXT});
+        }
+        rows.add(new Object[]{CategoryStyle.LOOTING_ICON, "Looting II+: 8C (immer)", DarkTheme.TEXT_DIM});
+
+        int panelX = 16;
+        int panelY = 40;
+        int panelW = 200;
+        int rowH = 14;
+        int panelH = rows.size() * rowH + 10;
+
+        fill(matrices, panelX, panelY, panelX + panelW, panelY + panelH, DarkTheme.BORDER);
+        fill(matrices, panelX + 1, panelY + 1, panelX + panelW - 1, panelY + panelH - 1, DarkTheme.PANEL);
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        int ty = panelY + 6;
+        for (Object[] row : rows) {
+            Item icon = (Item) row[0];
+            String text = (String) row[1];
+            int color = (int) row[2];
+            int textX = panelX + 8;
+            if (icon != null) {
+                client.getItemRenderer().renderGuiItemIcon(new ItemStack(icon), panelX + 6, ty - 2);
+                textX = panelX + 24;
+            }
+            drawStringWithShadow(matrices, this.textRenderer, text, textX, ty, color);
+            ty += rowH;
+        }
     }
 
     @Override

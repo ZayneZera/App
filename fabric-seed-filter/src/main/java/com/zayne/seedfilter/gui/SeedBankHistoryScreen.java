@@ -6,25 +6,29 @@ import com.zayne.seedfilter.SeedBankEntry;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.Items;
 import net.minecraft.text.LiteralText;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /**
- * View-only list of one stack's already-used ("joined") seeds, newest first - reached by
- * right-clicking a row's Delete button in {@link SeedBankTableScreen}. Never joins/deletes
- * anything itself, just a history lookup.
+ * List of one stack's already-used ("joined") seeds, newest first - reached by right-clicking a
+ * row's Delete button in {@link SeedBankTableScreen}. Otherwise view-only except for the one
+ * "delete all" action, which permanently removes every entry shown here (unlike the table's own
+ * Delete button, this doesn't move anything - there's nowhere further for a history entry to go).
  */
 public class SeedBankHistoryScreen extends Screen {
 
     private final Screen parent;
+    private final SeedBank bank;
     private final SeedBank.Stack stack;
     private int scrollOffset = 0;
 
-    public SeedBankHistoryScreen(Screen parent, SeedBank.Stack stack) {
+    public SeedBankHistoryScreen(Screen parent, SeedBank bank, SeedBank.Stack stack) {
         super(new LiteralText("Historie: " + CategoryStyle.labelFor(stack.key.matchedCategories)));
         this.parent = parent;
+        this.bank = bank;
         this.stack = stack;
     }
 
@@ -34,6 +38,13 @@ public class SeedBankHistoryScreen extends Screen {
         this.children.clear();
         this.addButton(new ButtonWidget(this.width / 2 - 75, this.height - 34, 150, 20,
                 new LiteralText("Zurück"), button -> MenuNav.navigate(this.client, parent)));
+        this.addButton(new IconClickButton(this.width / 2 + 90, this.height - 34, Items.LAVA_BUCKET,
+                () -> {
+                    if (!stack.used.isEmpty()) {
+                        bank.deleteHistory(stack);
+                        MenuNav.navigate(this.client, parent);
+                    }
+                }, null));
     }
 
     @Override

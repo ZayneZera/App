@@ -100,7 +100,7 @@ public class SeedBankTableScreen extends Screen {
                             this.init(this.client, this.width, this.height);
                         }
                     },
-                    () -> MenuNav.navigate(this.client, new SeedBankHistoryScreen(this, stack))));
+                    () -> MenuNav.navigate(this.client, new SeedBankHistoryScreen(this, bank, stack))));
             y += ROW_H;
         }
     }
@@ -224,10 +224,6 @@ public class SeedBankTableScreen extends Screen {
             }
             y += ROW_H;
         }
-
-        drawCenteredText(matrices, this.textRenderer,
-                new LiteralText("Linksklick Kugel: laden  |  Linksklick Eimer: leeren  |  Rechtsklick Eimer: Historie"),
-                this.width / 2, this.height - 52, DarkTheme.TEXT_DIM);
 
         super.render(matrices, mouseX, mouseY, delta);
     }

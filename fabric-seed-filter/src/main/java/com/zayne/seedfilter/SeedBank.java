@@ -83,6 +83,16 @@ public class SeedBank {
         save();
     }
 
+    /** Permanently removes every already-used (archived/history) entry of a stack - unlike
+     * clearStack, these are gone for good, not moved anywhere. Relies on stack.used holding the
+     * exact same SeedBankEntry object references this bank's own entries list does (true as long
+     * as stack came from this same SeedBank instance's groupedStacks()), since SeedBankEntry has
+     * no equals() override - entries.removeAll(...) is identity-based here, which is what's wanted. */
+    public void deleteHistory(Stack stack) {
+        entries.removeAll(stack.used);
+        save();
+    }
+
     /** Canonical snapshot of the enabled categories' settings - the stacking/stats key.
      * Deliberately excludes cheats/creative/threadCount/orMode, none of which affect which seeds
      * match, so two searches differing only in those still stack together. */

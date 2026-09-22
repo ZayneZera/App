@@ -4,13 +4,15 @@ import com.zayne.seedfilter.MenuNav;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.Items;
 import net.minecraft.text.LiteralText;
 
 /**
  * The seed bank's new entry point (replaces the old flat stack list): pick a top-level category -
  * Buried Treasure, Village, Ruined Portal, or OP (bonus multi-matches and Looting finds, see
- * SeedBankOpScreen) - before seeing any seeds. Each routes into a {@link SeedBankTableScreen}
- * with that category's own column set (see SeedBankTabs).
+ * SeedBankOpScreen) - before seeing any seeds. Each is an icon tile (CategoryIconButton) matching
+ * CategoryStyle's item-per-category language used everywhere else in the seed bank, and routes
+ * into a {@link SeedBankTableScreen} with that category's own column set (see SeedBankTabs).
  */
 public class SeedBankCategoryScreen extends Screen {
 
@@ -26,23 +28,24 @@ public class SeedBankCategoryScreen extends Screen {
         this.buttons.clear();
         this.children.clear();
 
-        int w = 180, h = 20, gap = 8;
-        int x = this.width / 2 - w / 2;
-        int y = this.height / 2 - (h * 4 + gap * 3) / 2;
+        int tileW = 96, tileH = 72, gap = 10;
+        int totalW = tileW * 4 + gap * 3;
+        int x = this.width / 2 - totalW / 2;
+        int y = this.height / 2 - tileH / 2;
 
-        this.addButton(new ButtonWidget(x, y, w, h, new LiteralText("Buried Treasure"), b ->
+        this.addButton(new CategoryIconButton(x, y, tileW, tileH, Items.CHEST, "Buried Treasure", b ->
                 MenuNav.navigate(this.client, new SeedBankTableScreen(this, "Buried Treasure",
                         SeedBankTabs.buriedTreasureColumns(), SeedBankTabs::isBuriedTreasureTab))));
-        y += h + gap;
-        this.addButton(new ButtonWidget(x, y, w, h, new LiteralText("Dorf"), b ->
+        x += tileW + gap;
+        this.addButton(new CategoryIconButton(x, y, tileW, tileH, Items.BELL, "Dorf", b ->
                 MenuNav.navigate(this.client, new SeedBankTableScreen(this, "Dorf",
                         SeedBankTabs.villageColumns(), SeedBankTabs::isVillageTab))));
-        y += h + gap;
-        this.addButton(new ButtonWidget(x, y, w, h, new LiteralText("Ruined Portal"), b ->
+        x += tileW + gap;
+        this.addButton(new CategoryIconButton(x, y, tileW, tileH, Items.OBSIDIAN, "Ruined Portal", b ->
                 MenuNav.navigate(this.client, new SeedBankTableScreen(this, "Ruined Portal",
                         SeedBankTabs.ruinedPortalColumns(), SeedBankTabs::isRuinedPortalTab))));
-        y += h + gap;
-        this.addButton(new ButtonWidget(x, y, w, h, new LiteralText("OP"), b ->
+        x += tileW + gap;
+        this.addButton(new CategoryIconButton(x, y, tileW, tileH, Items.NETHERITE_BLOCK, "OP", b ->
                 MenuNav.navigate(this.client, new SeedBankOpScreen(this))));
 
         this.addButton(new ButtonWidget(this.width / 2 - 75, this.height - 34, 150, 20,
