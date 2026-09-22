@@ -25,4 +25,28 @@ typedef struct {
  * empirical validation against a real seed. */
 void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, BuriedTreasureLoot *out);
 
+typedef struct {
+    int obsidian;
+    int flintAndSteel;
+    int fireCharge;
+    int goldenAxe;
+} RuinedPortalLoot;
+
+/* Resolves a ruined portal chest's contents (obsidian count, flint-and-steel/fire-charge presence,
+ * golden axe presence) for the portal generated in the given chunk on the given world seed.
+ *
+ * structureIndex/step are baked in: Ruined_Portal is registered at index 5 within
+ * GenerationStep.Feature.SURFACE_STRUCTURES (ordinal 4) - verified against decompiled 1.16.1
+ * StructureFeature.java (registration order: Pillager_Outpost, Mansion, Jungle_Pyramid,
+ * Desert_Pyramid, Igloo, Ruined_Portal=index 5, ...) and Biome.generateFeatureStep(), which assigns
+ * each structure an index by iterating Registry.STRUCTURE_FEATURE in registration order and
+ * counting only the structures that share the current step - the same mechanism already verified
+ * for Buried Treasure against a real seed.
+ *
+ * The chest's LootTableSeed draw happens inside Structure.place() while placing the template's
+ * blocks in order, and is independent of the structure-start ("carver seed") Random that picks the
+ * portal's template/rotation/mirror/mossiness - so this loot content is exact regardless of that
+ * (terrain-height-dependent) selection, which is NOT modeled here. */
+void loot_ruinedPortal(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, RuinedPortalLoot *out);
+
 #endif

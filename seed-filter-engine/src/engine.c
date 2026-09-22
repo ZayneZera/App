@@ -109,9 +109,18 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
 
     if (cfg->ruinedPortalEnabled) {
         BUMP(reachedRuinedPortal);
-        if (!find_structure_within(Ruined_Portal, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->ruinedPortalMaxChunks, NULL)) {
+        Pos portalPos;
+        if (!find_structure_within(Ruined_Portal, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->ruinedPortalMaxChunks, &portalPos)) {
             return 0;
         }
+        /* Fixed requirements (always on while Ruined Portal is enabled, no separate toggle):
+         * chest needs a golden axe, and either a flint and steel or a fire charge. The frame
+         * completability check (air-vs-obsidian at the 10 inner frame blocks) and the Looting
+         * II/III upgrade are not implemented yet - see engine.h. */
+        RuinedPortalLoot rpLoot;
+        loot_ruinedPortal(seed, portalPos.x >> 4, portalPos.z >> 4, &rpLoot);
+        if (rpLoot.goldenAxe < 1) return 0;
+        if (rpLoot.flintAndSteel < 1 && rpLoot.fireCharge < 1) return 0;
         BUMP(passedRuinedPortal);
     }
 

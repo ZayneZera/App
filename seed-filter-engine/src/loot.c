@@ -87,3 +87,79 @@ void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Bur
         }
     }
 }
+
+enum { RP_NONE, RP_COUNT, RP_ENCHANT };
+
+/* chests/ruined_portal.json's single pool, in file order. weight/kind/count-range per entry -
+ * verified against the loot table extracted from the 1.16.1 client jar. entry 0 (obsidian), 3
+ * (flint_and_steel), 4 (fire_charge) and 8 (golden_axe) are the ones loot_ruinedPortal() tracks. */
+static const struct { int32_t weight; int kind; int32_t cmin, cmax; } RP_ENTRIES[] = {
+    {40, RP_COUNT, 1, 2},    /* obsidian */
+    {40, RP_COUNT, 1, 4},    /* flint */
+    {40, RP_COUNT, 9, 18},   /* iron_nugget */
+    {40, RP_NONE, 0, 0},     /* flint_and_steel */
+    {40, RP_NONE, 0, 0},     /* fire_charge */
+    {15, RP_NONE, 0, 0},     /* golden_apple */
+    {15, RP_COUNT, 4, 24},   /* gold_nugget */
+    {15, RP_ENCHANT, 0, 0},  /* golden_sword */
+    {15, RP_ENCHANT, 0, 0},  /* golden_axe */
+    {15, RP_ENCHANT, 0, 0},  /* golden_hoe */
+    {15, RP_ENCHANT, 0, 0},  /* golden_shovel */
+    {15, RP_ENCHANT, 0, 0},  /* golden_pickaxe */
+    {15, RP_ENCHANT, 0, 0},  /* golden_boots */
+    {15, RP_ENCHANT, 0, 0},  /* golden_chestplate */
+    {15, RP_ENCHANT, 0, 0},  /* golden_helmet */
+    {15, RP_ENCHANT, 0, 0},  /* golden_leggings */
+    {5, RP_COUNT, 4, 12},    /* glistering_melon_slice */
+    {5, RP_NONE, 0, 0},      /* golden_horse_armor */
+    {5, RP_NONE, 0, 0},      /* light_weighted_pressure_plate */
+    {5, RP_COUNT, 4, 12},    /* golden_carrot */
+    {5, RP_NONE, 0, 0},      /* clock */
+    {5, RP_COUNT, 2, 8},     /* gold_ingot */
+    {1, RP_NONE, 0, 0},      /* bell */
+    {1, RP_NONE, 0, 0},      /* enchanted_golden_apple */
+    {1, RP_COUNT, 1, 2},     /* gold_block */
+};
+#define RP_ENTRY_COUNT (int32_t)(sizeof(RP_ENTRIES) / sizeof(RP_ENTRIES[0]))
+
+void loot_ruinedPortal(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, RuinedPortalLoot *out) {
+    out->obsidian = 0;
+    out->flintAndSteel = 0;
+    out->fireCharge = 0;
+    out->goldenAxe = 0;
+
+    uint64_t seed;
+    uint64_t populationSeed = mc_setPopulationSeed(&seed, worldSeed, chunkX * 16, chunkZ * 16);
+    /* Ruined_Portal: index 5 within GenerationStep.Feature.SURFACE_STRUCTURES (ordinal 4). */
+    mc_setDecoratorSeed(&seed, populationSeed, 5, 4);
+    uint64_t lootTableSeed = nextLong(&seed);
+
+    uint64_t s;
+    setSeed(&s, lootTableSeed);
+
+    int32_t weights[RP_ENTRY_COUNT];
+    for (int32_t i = 0; i < RP_ENTRY_COUNT; i++) weights[i] = RP_ENTRIES[i].weight;
+
+    int32_t rolls = mc_nextIntRange(&s, 4, 8);
+    for (int32_t i = 0; i < rolls; i++) {
+        int32_t pick = pick_entry(&s, weights, RP_ENTRY_COUNT);
+        int kind = RP_ENTRIES[pick].kind;
+        if (kind == RP_COUNT) {
+            int32_t count = mc_nextIntRange(&s, RP_ENTRIES[pick].cmin, RP_ENTRIES[pick].cmax);
+            if (pick == 0) out->obsidian += count;
+        } else if (kind == RP_ENCHANT) {
+            /* enchant_randomly draws exactly 2 nextInt calls (enchantment pick, then level pick) -
+             * the bound values themselves don't matter here (we only need the stream to advance by
+             * the same number of calls vanilla makes, not which enchantment/level got rolled), so
+             * any bound works: nextInt()'s call count is independent of the bound except in an
+             * astronomically rare rejection-sampling retry, which is the same accepted risk every
+             * other Minecraft seed-finding tool takes. */
+            nextInt(&s, 10);
+            nextInt(&s, 10);
+            if (pick == 8) out->goldenAxe++;
+        } else {
+            if (pick == 3) out->flintAndSteel++;
+            else if (pick == 4) out->fireCharge++;
+        }
+    }
+}
