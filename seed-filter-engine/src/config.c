@@ -14,6 +14,9 @@ void config_set_defaults(FilterConfig *cfg) {
 
     cfg->buriedTreasureEnabled = 1;
     cfg->buriedTreasureMaxChunks = 4;
+    cfg->buriedTreasureMinTnt = 0;
+    cfg->buriedTreasureDiamondFilter = 0;
+    cfg->buriedTreasureIronFilter = 0;
 
     cfg->bastionEnabled = 1;
     cfg->bastionAllowBridge = 1;
@@ -60,6 +63,9 @@ int config_load(FilterConfig *cfg, const char *path) {
         else if (strcmp(key, "ruined_portal_looting_sword") == 0) cfg->ruinedPortalRequireLootingSword = value;
         else if (strcmp(key, "buried_treasure_enabled") == 0) cfg->buriedTreasureEnabled = value;
         else if (strcmp(key, "buried_treasure_max_chunks") == 0) cfg->buriedTreasureMaxChunks = value;
+        else if (strcmp(key, "buried_treasure_min_tnt") == 0) cfg->buriedTreasureMinTnt = value;
+        else if (strcmp(key, "buried_treasure_diamond_filter") == 0) cfg->buriedTreasureDiamondFilter = value;
+        else if (strcmp(key, "buried_treasure_iron_filter") == 0) cfg->buriedTreasureIronFilter = value;
         else if (strcmp(key, "bastion_enabled") == 0) cfg->bastionEnabled = value;
         else if (strcmp(key, "bastion_allow_bridge") == 0) cfg->bastionAllowBridge = value;
         else if (strcmp(key, "bastion_allow_housing") == 0) cfg->bastionAllowHousing = value;
@@ -88,6 +94,9 @@ int config_save(const FilterConfig *cfg, const char *path) {
     fprintf(f, "ruined_portal_looting_sword=%d\n", cfg->ruinedPortalRequireLootingSword);
     fprintf(f, "buried_treasure_enabled=%d\n", cfg->buriedTreasureEnabled);
     fprintf(f, "buried_treasure_max_chunks=%d\n", cfg->buriedTreasureMaxChunks);
+    fprintf(f, "buried_treasure_min_tnt=%d\n", cfg->buriedTreasureMinTnt);
+    fprintf(f, "buried_treasure_diamond_filter=%d\n", cfg->buriedTreasureDiamondFilter);
+    fprintf(f, "buried_treasure_iron_filter=%d\n", cfg->buriedTreasureIronFilter);
     fprintf(f, "bastion_enabled=%d\n", cfg->bastionEnabled);
     fprintf(f, "bastion_allow_bridge=%d\n", cfg->bastionAllowBridge);
     fprintf(f, "bastion_allow_housing=%d\n", cfg->bastionAllowHousing);

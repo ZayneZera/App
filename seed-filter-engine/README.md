@@ -23,7 +23,7 @@ Requires a C compiler (MinGW-w64 on Windows, or cross-compile from Linux):
 
 ```
 x86_64-w64-mingw32-gcc -O2 -std=gnu11 -Isrc -Ithird_party/cubiomes \
-  src/config.c src/engine.c src/search.c src/main_cli.c \
+  src/config.c src/engine.c src/search.c src/main_cli.c src/loot.c \
   third_party/cubiomes/{biomenoise,biomes,finders,generator,layers,noise,quadbase,util}.c \
   -lm -static -lwinpthread -static-libgcc -o seedfilter.exe   # Windows, statically linked
 ```
@@ -37,5 +37,9 @@ x86_64-w64-mingw32-gcc -O2 -std=gnu11 -Isrc -Ithird_party/cubiomes \
 - `src/engine.c/h` - criteria checking against a single seed, using cubiomes' `getStructurePos`,
   `isViableStructurePos`, `getVariant` (bastion type) and `getSpawn` directly.
 - `src/search.c` - multithreaded random-seed scanning until a match or cancel.
+- `src/mc_random.h` - vanilla chunk/decorator/position-hash seed derivation helpers (verified
+  against decompiled 1.16.1 source), built on cubiomes' Java-Random primitives in `rng.h`.
+- `src/loot.c/h` - resolves specific structure chest loot table criteria (currently buried
+  treasure's TNT/diamond/iron counts) from the world seed and the structure's chunk position.
 - `src/main_cli.c` - headless CLI entry point (any platform) - this is what actually ships.
 - `src/gui_win32.c` - retired standalone Win32 settings GUI, not currently built.

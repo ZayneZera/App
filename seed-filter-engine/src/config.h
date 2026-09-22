@@ -11,6 +11,9 @@ typedef struct {
 
     int buriedTreasureEnabled;
     int buriedTreasureMaxChunks;
+    int buriedTreasureMinTnt;           /* 0-2, 0 = no TNT requirement */
+    int buriedTreasureDiamondFilter;    /* requires >= 3 diamonds */
+    int buriedTreasureIronFilter;       /* requires >= 10 iron, or >= 7 if diamond filter is also on */
 
     int bastionEnabled;
     int bastionAllowBridge;

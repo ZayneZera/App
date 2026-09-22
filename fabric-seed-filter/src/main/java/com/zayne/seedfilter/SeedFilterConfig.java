@@ -21,6 +21,9 @@ public class SeedFilterConfig {
 
     public boolean buriedTreasureEnabled = true;
     public int buriedTreasureMaxChunks = 4;
+    public int buriedTreasureMinTnt = 0;
+    public boolean buriedTreasureDiamondFilter = false;
+    public boolean buriedTreasureIronFilter = false;
 
     public boolean bastionEnabled = true;
     public boolean bastionAllowBridge = true;
@@ -68,6 +71,9 @@ public class SeedFilterConfig {
             case "ruined_portal_looting_sword": ruinedPortalLootingSword = value != 0; break;
             case "buried_treasure_enabled": buriedTreasureEnabled = value != 0; break;
             case "buried_treasure_max_chunks": buriedTreasureMaxChunks = value; break;
+            case "buried_treasure_min_tnt": buriedTreasureMinTnt = value; break;
+            case "buried_treasure_diamond_filter": buriedTreasureDiamondFilter = value != 0; break;
+            case "buried_treasure_iron_filter": buriedTreasureIronFilter = value != 0; break;
             case "bastion_enabled": bastionEnabled = value != 0; break;
             case "bastion_allow_bridge": bastionAllowBridge = value != 0; break;
             case "bastion_allow_housing": bastionAllowHousing = value != 0; break;
@@ -96,6 +102,9 @@ public class SeedFilterConfig {
             lines.add("ruined_portal_looting_sword=" + bit(ruinedPortalLootingSword));
             lines.add("buried_treasure_enabled=" + bit(buriedTreasureEnabled));
             lines.add("buried_treasure_max_chunks=" + buriedTreasureMaxChunks);
+            lines.add("buried_treasure_min_tnt=" + buriedTreasureMinTnt);
+            lines.add("buried_treasure_diamond_filter=" + bit(buriedTreasureDiamondFilter));
+            lines.add("buried_treasure_iron_filter=" + bit(buriedTreasureIronFilter));
             lines.add("bastion_enabled=" + bit(bastionEnabled));
             lines.add("bastion_allow_bridge=" + bit(bastionAllowBridge));
             lines.add("bastion_allow_housing=" + bit(bastionAllowHousing));

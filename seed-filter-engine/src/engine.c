@@ -6,6 +6,7 @@
 
 #include "finders.h"
 #include "generator.h"
+#include "loot.h"
 
 #define MC MC_1_16_1
 
@@ -116,8 +117,19 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
 
     if (cfg->buriedTreasureEnabled) {
         BUMP(reachedTreasure);
-        if (!find_structure_within(Treasure, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->buriedTreasureMaxChunks, NULL)) {
+        Pos treasurePos;
+        if (!find_structure_within(Treasure, &gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg->buriedTreasureMaxChunks, &treasurePos)) {
             return 0;
+        }
+        if (cfg->buriedTreasureMinTnt > 0 || cfg->buriedTreasureDiamondFilter || cfg->buriedTreasureIronFilter) {
+            BuriedTreasureLoot loot;
+            loot_buriedTreasure(seed, treasurePos.x >> 4, treasurePos.z >> 4, &loot);
+            if (loot.tnt < cfg->buriedTreasureMinTnt) return 0;
+            if (cfg->buriedTreasureDiamondFilter && loot.diamond < 3) return 0;
+            if (cfg->buriedTreasureIronFilter) {
+                int minIron = cfg->buriedTreasureDiamondFilter ? 7 : 10;
+                if (loot.iron < minIron) return 0;
+            }
         }
         BUMP(passedTreasure);
     }
