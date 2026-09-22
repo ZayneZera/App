@@ -39,7 +39,18 @@ public class SeedFilterConfig {
 
     public boolean enableCheats = false;
     public boolean creativeMode = false;
+    /** Not written by save() (see there) - there's no in-game UI for this, so leaving it out lets
+     * the exe's own config_set_defaults() auto-detect the real CPU core count every run instead
+     * of this stale Java-side default silently overwriting that the moment any other setting is
+     * saved from the menu. Kept only so an externally-set thread_count= in the file round-trips
+     * instead of being silently dropped if something else ever reads this field. */
     public int threadCount = 6;
+
+    /** Global AND/OR switch across the five main categories (village/ruinedPortal/buriedTreasure/
+     * bastion/fortress) - see seed-filter-engine's cfg->orMode. Only matters for the seed bank's
+     * background search; the normal join-now search always uses AND (a "some also work" seed
+     * wouldn't make sense to auto-join). */
+    public boolean orMode = false;
 
     public static SeedFilterConfig load(Path path) {
         SeedFilterConfig cfg = new SeedFilterConfig();
@@ -89,6 +100,7 @@ public class SeedFilterConfig {
             case "enable_cheats": enableCheats = value != 0; break;
             case "creative_mode": creativeMode = value != 0; break;
             case "thread_count": threadCount = value; break;
+            case "or_mode": orMode = value != 0; break;
             default: break;
         }
     }
@@ -121,7 +133,8 @@ public class SeedFilterConfig {
             lines.add("fortress_max_nether_chunks=" + fortressMaxNetherChunks);
             lines.add("enable_cheats=" + bit(enableCheats));
             lines.add("creative_mode=" + bit(creativeMode));
-            lines.add("thread_count=" + threadCount);
+            // thread_count intentionally not written - see the field's own comment.
+            lines.add("or_mode=" + bit(orMode));
             Files.write(path, lines);
         } catch (IOException ignored) {
         }

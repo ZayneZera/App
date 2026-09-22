@@ -58,6 +58,9 @@ public class SeedFilterMenuScreen extends Screen {
         int contentW = panelW - 32;
         nextY = panelY + 14 - scrollOffset;
 
+        addCheckboxRow(contentX, "Seedbank: ODER statt UND zwischen Filtern", config.orMode, v -> config.orMode = v);
+        addDivider(contentX, contentW);
+
         addSection("Ruined Portal", contentX, contentW, config.ruinedPortalEnabled, v -> config.ruinedPortalEnabled = v);
         addCheckboxRow(contentX, "Schwert mit Looting II/III", config.ruinedPortalLootingSword, v -> config.ruinedPortalLootingSword = v);
         addSliderRow(contentX, contentW, "Chunks", 1, 32, config.ruinedPortalMaxChunks, v -> config.ruinedPortalMaxChunks = v);
