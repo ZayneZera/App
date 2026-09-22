@@ -23,9 +23,10 @@ public final class CategoryStyle {
 
     public static final Item OP_ICON = Items.NETHERITE_BLOCK;
 
-    /** The first matched category's icon, or OP_ICON if more than one bit is set. */
+    /** The first matched category's icon, or OP_ICON if this is a bonus multi-match - see
+     * ExternalEngine.isOp for why Bastion/Fortress never count toward that. */
     public static Item iconFor(int matchedCategories) {
-        if (Integer.bitCount(matchedCategories) >= 2) {
+        if (ExternalEngine.isOp(matchedCategories)) {
             return OP_ICON;
         }
         for (int i = 0; i < BITS.length; i++) {

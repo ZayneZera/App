@@ -64,7 +64,7 @@ public class SeedBankScanScreen extends Screen {
         client.execute(() -> {
             bank.add(entry);
             totalFound.incrementAndGet();
-            if (Integer.bitCount(entry.matchedCategories) >= 2) {
+            if (ExternalEngine.isOp(entry.matchedCategories)) {
                 opFound.incrementAndGet();
             }
             for (int i = 0; i < CategoryStyle.BITS.length; i++) {

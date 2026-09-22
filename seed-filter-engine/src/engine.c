@@ -197,54 +197,44 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
     int netherZ = spawnChunkBlockZ / 8;
     Generator gNether;
 
+    /* Bastion and Fortress are NEVER part of the AND/OR choice below - each is unconditionally
+     * mandatory whenever it's enabled, exactly like every category used to behave before orMode
+     * existed. cfg->orMode only changes how Village/RuinedPortal/BuriedTreasure combine with each
+     * other: AND requires every one of THEM that's enabled, OR requires only one. Nether
+     * generator setup stays lazy - only paid if either is actually enabled. */
+    if (cfg->bastionEnabled || cfg->fortressEnabled) {
+        setupGenerator(&gNether, MC, 0);
+        applySeed(&gNether, DIM_NETHER, seed);
+        if (cfg->bastionEnabled && !category_bastion(&gNether, seed, netherX, netherZ, cfg, stats)) return 0;
+        if (cfg->fortressEnabled && !category_fortress(&gNether, seed, netherX, netherZ, cfg, stats)) return 0;
+    }
+
+    int flexEnabledCount = (cfg->villageEnabled ? 1 : 0) + (cfg->ruinedPortalEnabled ? 1 : 0) + (cfg->buriedTreasureEnabled ? 1 : 0);
+    int flexMatched = 0;
+
     if (!cfg->orMode) {
-        /* Original AND semantics, unchanged: early-exit the instant any enabled category fails,
-         * so a rare/selective category checked early skips the cost of later ones entirely - in
-         * particular the Nether generator setup below stays lazy, paid only once every cheaper
-         * overworld category already passed, never for a seed that was going to be rejected
-         * anyway. */
         if (cfg->villageEnabled && !category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) return 0;
         if (cfg->ruinedPortalEnabled && !category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) return 0;
         if (cfg->buriedTreasureEnabled && !category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) return 0;
-
-        if (cfg->bastionEnabled || cfg->fortressEnabled) {
-            setupGenerator(&gNether, MC, 0);
-            applySeed(&gNether, DIM_NETHER, seed);
-            if (cfg->bastionEnabled && !category_bastion(&gNether, seed, netherX, netherZ, cfg, stats)) return 0;
-            if (cfg->fortressEnabled && !category_fortress(&gNether, seed, netherX, netherZ, cfg, stats)) return 0;
-        }
-
-        if (out) {
-            int matched = 0;
-            if (cfg->villageEnabled) matched |= CATEGORY_VILLAGE;
-            if (cfg->ruinedPortalEnabled) matched |= CATEGORY_RUINED_PORTAL;
-            if (cfg->buriedTreasureEnabled) matched |= CATEGORY_TREASURE;
-            if (cfg->bastionEnabled) matched |= CATEGORY_BASTION;
-            if (cfg->fortressEnabled) matched |= CATEGORY_FORTRESS;
-            out->matchedCategories = matched;
-        }
+        if (cfg->villageEnabled) flexMatched |= CATEGORY_VILLAGE;
+        if (cfg->ruinedPortalEnabled) flexMatched |= CATEGORY_RUINED_PORTAL;
+        if (cfg->buriedTreasureEnabled) flexMatched |= CATEGORY_TREASURE;
     } else {
-        /* OR semantics: every enabled category is evaluated regardless of the others' outcome
-         * (no early exit - we need to know the full matched set, not just whether ANY passed),
-         * and a match is ANY non-empty result. More than one bit set means this seed satisfies
-         * multiple independently - the mod's seed bank tags that "OP". */
-        int matched = 0;
-        if (cfg->villageEnabled && category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) matched |= CATEGORY_VILLAGE;
-        if (cfg->ruinedPortalEnabled && category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) matched |= CATEGORY_RUINED_PORTAL;
-        if (cfg->buriedTreasureEnabled && category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) matched |= CATEGORY_TREASURE;
-
-        if (cfg->bastionEnabled || cfg->fortressEnabled) {
-            setupGenerator(&gNether, MC, 0);
-            applySeed(&gNether, DIM_NETHER, seed);
-            if (cfg->bastionEnabled && category_bastion(&gNether, seed, netherX, netherZ, cfg, stats)) matched |= CATEGORY_BASTION;
-            if (cfg->fortressEnabled && category_fortress(&gNether, seed, netherX, netherZ, cfg, stats)) matched |= CATEGORY_FORTRESS;
-        }
-
-        if (matched == 0) return 0;
-        if (out) out->matchedCategories = matched;
+        /* Every enabled one of the flexible three is evaluated regardless of the others'
+         * outcome (no early exit - the full matched set is needed, not just whether any one
+         * passed, so the mod can tell a bonus multi-match "OP" apart from a plain single one). */
+        if (cfg->villageEnabled && category_village(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) flexMatched |= CATEGORY_VILLAGE;
+        if (cfg->ruinedPortalEnabled && category_ruined_portal(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, out, stats)) flexMatched |= CATEGORY_RUINED_PORTAL;
+        if (cfg->buriedTreasureEnabled && category_treasure(&gOverworld, seed, spawnChunkBlockX, spawnChunkBlockZ, cfg, stats)) flexMatched |= CATEGORY_TREASURE;
+        if (flexEnabledCount > 0 && flexMatched == 0) return 0;
     }
 
     if (out) {
+        int matched = flexMatched;
+        if (cfg->bastionEnabled) matched |= CATEGORY_BASTION;
+        if (cfg->fortressEnabled) matched |= CATEGORY_FORTRESS;
+        out->matchedCategories = matched;
+
         out->seed = seed;
         out->spawnX = spawn.x;
         out->spawnZ = spawn.z;

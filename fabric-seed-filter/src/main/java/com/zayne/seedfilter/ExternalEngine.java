@@ -24,14 +24,23 @@ public class ExternalEngine {
     private static final Logger LOGGER = LogManager.getLogger("seed-filter");
 
     /** Mirrors config.h's CATEGORY_* bit flags exactly - which top-level category(ies) a seed
-     * matched. In AND-mode searches (the normal join-now flow) this is always exactly the full
-     * enabled set; in OR-mode (the seed bank) it can be any non-empty subset, and more than one
-     * bit set is what the seed bank tags "OP". */
+     * matched. Bastion/Fortress are never part of the OR/AND choice (see engine.c's
+     * engine_check_seed) - each is unconditionally mandatory whenever it's enabled, exactly like
+     * before OR-mode existed. cfg->orMode only changes how Village/RuinedPortal/BuriedTreasure
+     * combine with each other: AND requires every enabled one of them, OR requires only one. */
     public static final int CATEGORY_VILLAGE = 1;
     public static final int CATEGORY_RUINED_PORTAL = 1 << 1;
     public static final int CATEGORY_TREASURE = 1 << 2;
     public static final int CATEGORY_BASTION = 1 << 3;
     public static final int CATEGORY_FORTRESS = 1 << 4;
+
+    /** Only Village/RuinedPortal/BuriedTreasure can ever be "optional" (see above), so only they
+     * count toward "OP" - matching more than the required minimum of one of them at once. */
+    private static final int FLEX_CATEGORY_MASK = CATEGORY_VILLAGE | CATEGORY_RUINED_PORTAL | CATEGORY_TREASURE;
+
+    public static boolean isOp(int matchedCategories) {
+        return Integer.bitCount(matchedCategories & FLEX_CATEGORY_MASK) >= 2;
+    }
 
     public static class Result {
         public final long seed;

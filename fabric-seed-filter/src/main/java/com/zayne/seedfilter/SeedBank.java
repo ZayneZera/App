@@ -105,9 +105,11 @@ public class SeedBank {
             this.matchedCategories = matchedCategories;
         }
 
-        /** True when this stack matched more than one category at once - the seed bank's "OP". */
+        /** True when this stack matched more of Village/RuinedPortal/BuriedTreasure than the
+         * required minimum at once - the seed bank's "OP". See ExternalEngine.isOp for why
+         * Bastion/Fortress never count toward this (they're always mandatory, never a bonus). */
         public boolean isOp() {
-            return Integer.bitCount(matchedCategories) >= 2;
+            return ExternalEngine.isOp(matchedCategories);
         }
 
         @Override
