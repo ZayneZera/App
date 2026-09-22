@@ -11,11 +11,9 @@
 
 #define MC MC_1_16_1
 
-/* Finds the NEAREST viable position of structureType within maxChunks (real circular distance) of
- * (centerBlockX, centerBlockZ), matching what vanilla's /locate command reports - scanning in
- * region order and returning the first candidate (as this used to do) can return a different,
- * farther structure than /locate would find whenever 2+ candidates exist in range, which silently
- * disconnects what the engine validated from whatever the player teleports/locates to. */
+/* Finds any viable position of structureType within maxChunks (real circular distance) of
+ * (centerBlockX, centerBlockZ). Returns 1 and fills *outPos on success. Mirrors the box-scan
+ * pattern cubiomes' own tests.c demonstrates for structure searches. */
 static int find_structure_within(int structureType, Generator *g, uint64_t seed, int centerBlockX, int centerBlockZ,
                                   int maxChunks, Pos *outPos) {
     StructureConfig sconf;
@@ -29,10 +27,6 @@ static int find_structure_within(int structureType, Generator *g, uint64_t seed,
     double z0 = centerBlockZ - maxBlocks, z1 = centerBlockZ + maxBlocks;
     int rx0 = (int) floor(x0 / blocksPerRegion), rx1 = (int) ceil(x1 / blocksPerRegion);
     int rz0 = (int) floor(z0 / blocksPerRegion), rz1 = (int) ceil(z1 / blocksPerRegion);
-
-    int found = 0;
-    double bestDistChunks = 0.0;
-    Pos bestPos = {0, 0};
 
     for (int j = rz0; j <= rz1; j++) {
         for (int i = rx0; i <= rx1; i++) {
@@ -48,16 +42,11 @@ static int find_structure_within(int structureType, Generator *g, uint64_t seed,
             if (!isViableStructurePos(structureType, g, pos.x, pos.z, 0)) {
                 continue;
             }
-            if (!found || distChunks < bestDistChunks) {
-                found = 1;
-                bestDistChunks = distChunks;
-                bestPos = pos;
-            }
+            if (outPos) *outPos = pos;
+            return 1;
         }
     }
-
-    if (found && outPos) *outPos = bestPos;
-    return found;
+    return 0;
 }
 
 static int bastion_type_allowed(int start, const FilterConfig *cfg) {
