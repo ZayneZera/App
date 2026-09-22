@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "seed-filter",
+  "version": "${version}",
+  "name": "Speedrun Seed Filter",
+  "description": "Practice-Tool: Filtert Seeds nach Speedrun-Kriterien (Ruined Portal, Village, Buried Treasure, Bastion, Fortress) und erstellt automatisch CF-Welten.",
+  "authors": [
+    "Zayne"
+  ],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.zayne.seedfilter.SeedFilterMod"
+    ]
+  },
+  "mixins": [
+    "seedfilter.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.9.0",
+    "fabric": "*",
+    "minecraft": "1.16.1"
+  }
+}

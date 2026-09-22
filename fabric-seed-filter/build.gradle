@@ -1,0 +1,70 @@
+plugins {
+    id 'fabric-loom' version '1.9.2'
+    id 'maven-publish'
+}
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+archivesBaseName = project.archives_base_name
+version = project.mod_version
+group = project.maven_group
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    it.options.encoding = "UTF-8"
+    it.options.release = 8
+}
+
+/**
+ * Every `build` deploys the freshly remapped jar straight into the MCSR PrismLauncher instance's
+ * mods folder, so there's no more manual copy-paste step. Before that, whatever jar is CURRENTLY
+ * in that mods folder (the previous build, still under the same name since mod_version is fixed)
+ * is rotated into build/libs as a one-deep backup rather than just being clobbered in place - so
+ * a bad build can be rolled back by hand from build/libs if needed.
+ */
+def mcsrModsDir = file("C:/Users/scorm/AppData/Roaming/PrismLauncher/instances/MCSR/minecraft/mods")
+
+task deployToMcsrMods {
+    group = "seedfilter"
+    description = "Rotates the previous deployed jar into build/libs, then deploys the new one into the MCSR mods folder."
+    dependsOn remapJar
+
+    doLast {
+        File builtJar = remapJar.archiveFile.get().asFile
+        File deployedJar = new File(mcsrModsDir, builtJar.name)
+        mcsrModsDir.mkdirs()
+
+        if (deployedJar.exists()) {
+            File stagedNewJar = new File(builtJar.parentFile, "~staged-${builtJar.name}")
+            java.nio.file.Files.move(builtJar.toPath(), stagedNewJar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            java.nio.file.Files.move(deployedJar.toPath(), builtJar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+            java.nio.file.Files.move(stagedNewJar.toPath(), deployedJar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } else {
+            java.nio.file.Files.copy(builtJar.toPath(), deployedJar.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        }
+
+        println "Deployed ${builtJar.name} to ${mcsrModsDir} (previous build, if any, is now in ${builtJar.parentFile})"
+    }
+}
+
+build.finalizedBy(deployToMcsrMods)
