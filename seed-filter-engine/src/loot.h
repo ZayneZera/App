@@ -30,10 +30,12 @@ typedef struct {
     int flintAndSteel;
     int fireCharge;
     int goldenAxe;
+    int swordLootingLevel; /* 0 = no golden sword, or one without Looting; else 1-3 */
 } RuinedPortalLoot;
 
 /* Resolves a ruined portal chest's contents (obsidian count, flint-and-steel/fire-charge presence,
- * golden axe presence) for the portal generated in the given chunk on the given world seed.
+ * golden axe presence, and the golden sword's Looting level if it rolled one) for the portal
+ * generated in the given chunk on the given world seed.
  *
  * structureIndex/step are baked in: Ruined_Portal is registered at index 5 within
  * GenerationStep.Feature.SURFACE_STRUCTURES (ordinal 4) - verified against decompiled 1.16.1

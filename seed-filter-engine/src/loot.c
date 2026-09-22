@@ -88,7 +88,19 @@ void loot_buriedTreasure(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Bur
     }
 }
 
-enum { RP_NONE, RP_COUNT, RP_ENCHANT };
+enum { RP_NONE, RP_COUNT, RP_ENCHANT, RP_ENCHANT_SWORD };
+
+/* Golden sword's enchant_randomly draws from ALL registered enchantments (Enchantments.java
+ * declaration order == Registry.ENCHANTMENT iteration order, the same mechanism verified for
+ * StructureFeature's decorator index) filtered to isAvailableForRandomSelection() (default true,
+ * NOT overridden by curses in 1.16.1 - verified against decompiled Enchantment.java and
+ * VanishingCurseEnchantment.java, so curses ARE eligible here despite not being obtainable via
+ * the enchanting table) and isAcceptableItem() for a sword (EnchantmentTarget.WEAPON, or
+ * BREAKABLE/VANISHABLE since a sword has durability). In declaration order that list is: Sharpness,
+ * Smite, Bane of Arthropods, Knockback, Fire Aspect, Looting, Sweeping Edge, Unbreaking, Mending,
+ * Curse of Vanishing - 10 entries, Looting at index 5. */
+#define RP_SWORD_ENCHANT_COUNT 10
+#define RP_SWORD_LOOTING_INDEX 5
 
 /* chests/ruined_portal.json's single pool, in file order. weight/kind/count-range per entry -
  * verified against the loot table extracted from the 1.16.1 client jar. entry 0 (obsidian), 3
@@ -101,7 +113,7 @@ static const struct { int32_t weight; int kind; int32_t cmin, cmax; } RP_ENTRIES
     {40, RP_NONE, 0, 0},     /* fire_charge */
     {15, RP_NONE, 0, 0},     /* golden_apple */
     {15, RP_COUNT, 4, 24},   /* gold_nugget */
-    {15, RP_ENCHANT, 0, 0},  /* golden_sword */
+    {15, RP_ENCHANT_SWORD, 0, 0}, /* golden_sword */
     {15, RP_ENCHANT, 0, 0},  /* golden_axe */
     {15, RP_ENCHANT, 0, 0},  /* golden_hoe */
     {15, RP_ENCHANT, 0, 0},  /* golden_shovel */
@@ -127,6 +139,7 @@ void loot_ruinedPortal(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Ruine
     out->flintAndSteel = 0;
     out->fireCharge = 0;
     out->goldenAxe = 0;
+    out->swordLootingLevel = 0;
 
     uint64_t seed;
     uint64_t populationSeed = mc_setPopulationSeed(&seed, worldSeed, chunkX * 16, chunkZ * 16);
@@ -157,6 +170,16 @@ void loot_ruinedPortal(uint64_t worldSeed, int32_t chunkX, int32_t chunkZ, Ruine
             nextInt(&s, 10);
             nextInt(&s, 10);
             if (pick == 8) out->goldenAxe++;
+        } else if (kind == RP_ENCHANT_SWORD) {
+            /* Unlike the other golden items, we need the REAL bound and the actual drawn value
+             * here to know whether Looting specifically got picked (see RP_SWORD_ENCHANT_COUNT
+             * doc comment above) - the level draw's bound only matters when it did. */
+            int32_t enchantIdx = nextInt(&s, RP_SWORD_ENCHANT_COUNT);
+            if (enchantIdx == RP_SWORD_LOOTING_INDEX) {
+                out->swordLootingLevel = nextInt(&s, 3) + 1; /* Looting I-III */
+            } else {
+                nextInt(&s, 10); /* dummy level draw for whichever other enchantment got picked */
+            }
         } else {
             if (pick == 3) out->flintAndSteel++;
             else if (pick == 4) out->fireCharge++;

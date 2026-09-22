@@ -40,8 +40,8 @@ x86_64-w64-mingw32-gcc -O2 -std=gnu11 -Isrc -Ithird_party/cubiomes \
 - `src/mc_random.h` - vanilla chunk/decorator/position-hash seed derivation helpers (verified
   against decompiled 1.16.1 source), built on cubiomes' Java-Random primitives in `rng.h`.
 - `src/loot.c/h` - resolves specific structure chest loot table criteria (buried treasure's
-  TNT/diamond/iron/fish counts, ruined portal's obsidian/flint&steel/fire-charge/golden-axe
-  counts) from the world seed and the structure's chunk position.
+  TNT/diamond/iron/fish counts, ruined portal's obsidian/flint&steel/fire-charge/golden-axe counts
+  and golden sword Looting level) from the world seed and the structure's chunk position.
 - `src/frame.c/h` - approximate Ruined Portal frame-completability check (Air/Obsidian at the
   border positions, no Crying Obsidian). Only handles 7 of the 13 portal templates (the others
   have non-standard or unclear geometry) and uses cubiomes' approximate terrain height in place of

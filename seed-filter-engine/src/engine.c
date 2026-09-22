@@ -115,13 +115,12 @@ int engine_check_seed(uint64_t seed, const FilterConfig *cfg, FilterResult *out,
             return 0;
         }
         /* Fixed requirements (always on while Ruined Portal is enabled, no separate toggle):
-         * chest needs a golden axe, and either a flint and steel or a fire charge. The frame
-         * completability check (air-vs-obsidian at the 10 inner frame blocks) and the Looting
-         * II/III upgrade are not implemented yet - see engine.h. */
+         * chest needs a golden axe, and either a flint and steel or a fire charge. */
         RuinedPortalLoot rpLoot;
         loot_ruinedPortal(seed, portalPos.x >> 4, portalPos.z >> 4, &rpLoot);
         if (rpLoot.goldenAxe < 1) return 0;
         if (rpLoot.flintAndSteel < 1 && rpLoot.fireCharge < 1) return 0;
+        if (cfg->ruinedPortalRequireLootingSword && rpLoot.swordLootingLevel < 2) return 0;
 
         if (cfg->ruinedPortalFrameCheck) {
             int biomeID = getBiomeAt(&gOverworld, 4, portalPos.x >> 2, 0, portalPos.z >> 2);
