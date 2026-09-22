@@ -111,7 +111,7 @@ public class CountdownScreen extends Screen {
                 return false;
             }
             scanFuture.thenAccept(result -> client.execute(() ->
-                    SeedFilterMod.createAndJoin(client, new TitleScreen(), result, startAttempt)));
+                    SeedFilterMod.handleSearchResult(client, new TitleScreen(), result, startAttempt)));
             return true;
         });
     }

@@ -108,10 +108,17 @@ public class SeedBank {
     public static final class StackKey {
         public final String signature;
         public final int matchedCategories;
+        /** Only meaningful when matchedCategories has CATEGORY_LOOTING_RP set - part of the key
+         * (rather than just a Stack-level display value) so a Looting II and a Looting III find
+         * with otherwise-identical settings land in separate stacks instead of one stack mixing
+         * two different levels under a single "Level" column value. Always 0 for non-Looting
+         * stacks (harmless - never creates an extra split there). */
+        public final int lootingLevel;
 
-        public StackKey(String signature, int matchedCategories) {
+        public StackKey(String signature, int matchedCategories, int lootingLevel) {
             this.signature = signature;
             this.matchedCategories = matchedCategories;
+            this.lootingLevel = (matchedCategories & ExternalEngine.CATEGORY_LOOTING_RP) != 0 ? lootingLevel : 0;
         }
 
         /** True when this stack matched more of Village/RuinedPortal/BuriedTreasure than the
@@ -121,16 +128,21 @@ public class SeedBank {
             return ExternalEngine.isOp(matchedCategories);
         }
 
+        public boolean isLooting() {
+            return (matchedCategories & ExternalEngine.CATEGORY_LOOTING_RP) != 0;
+        }
+
         @Override
         public boolean equals(Object o) {
             if (!(o instanceof StackKey)) return false;
             StackKey other = (StackKey) o;
-            return matchedCategories == other.matchedCategories && signature.equals(other.signature);
+            return matchedCategories == other.matchedCategories && lootingLevel == other.lootingLevel
+                    && signature.equals(other.signature);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(signature, matchedCategories);
+            return Objects.hash(signature, matchedCategories, lootingLevel);
         }
     }
 
@@ -144,6 +156,18 @@ public class SeedBank {
         Stack(StackKey key) {
             this.key = key;
         }
+
+        /** The search settings every entry in this stack shares (signature is part of the stack
+         * key, and settings mirrors it 1:1) - grabbed from whichever list has an entry. Falls back
+         * to all-disabled defaults for the (should-be-impossible) case of a stack with no entries
+         * at all, and for entries saved before SearchSettings existed (settings == null). */
+        public SeedBankEntry.SearchSettings settings() {
+            SeedBankEntry sample = !unused.isEmpty() ? unused.get(0) : (!used.isEmpty() ? used.get(0) : null);
+            if (sample == null || sample.settings == null) {
+                return new SeedBankEntry.SearchSettings();
+            }
+            return sample.settings;
+        }
     }
 
     /** Groups every saved entry into its stack, preserving insertion order for unused entries
@@ -153,7 +177,7 @@ public class SeedBank {
     public List<Stack> groupedStacks() {
         Map<StackKey, Stack> byKey = new LinkedHashMap<>();
         for (SeedBankEntry entry : entries) {
-            StackKey key = new StackKey(entry.signature, entry.matchedCategories);
+            StackKey key = new StackKey(entry.signature, entry.matchedCategories, entry.lootingLevel);
             Stack stack = byKey.computeIfAbsent(key, Stack::new);
             if (entry.used) {
                 stack.used.add(0, entry);

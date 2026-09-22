@@ -22,10 +22,15 @@ public final class CategoryStyle {
     };
 
     public static final Item OP_ICON = Items.NETHERITE_BLOCK;
+    public static final Item LOOTING_ICON = Items.GOLDEN_SWORD;
 
-    /** The first matched category's icon, or OP_ICON if this is a bonus multi-match - see
+    /** The first matched category's icon, LOOTING_ICON for a Looting-side-channel find (see
+     * ExternalEngine.CATEGORY_LOOTING_RP), or OP_ICON if this is a bonus multi-match - see
      * ExternalEngine.isOp for why Bastion/Fortress never count toward that. */
     public static Item iconFor(int matchedCategories) {
+        if ((matchedCategories & ExternalEngine.CATEGORY_LOOTING_RP) != 0) {
+            return LOOTING_ICON;
+        }
         if (ExternalEngine.isOp(matchedCategories)) {
             return OP_ICON;
         }
@@ -39,6 +44,9 @@ public final class CategoryStyle {
 
     public static String labelFor(int matchedCategories) {
         StringBuilder sb = new StringBuilder();
+        if ((matchedCategories & ExternalEngine.CATEGORY_LOOTING_RP) != 0) {
+            sb.append("Looting");
+        }
         for (int i = 0; i < BITS.length; i++) {
             if ((matchedCategories & BITS[i]) != 0) {
                 if (sb.length() > 0) sb.append(" + ");

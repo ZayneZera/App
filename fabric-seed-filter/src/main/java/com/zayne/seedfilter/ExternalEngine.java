@@ -33,6 +33,12 @@ public class ExternalEngine {
     public static final int CATEGORY_TREASURE = 1 << 2;
     public static final int CATEGORY_BASTION = 1 << 3;
     public static final int CATEGORY_FORTRESS = 1 << 4;
+    /** Mirrors config.h's CATEGORY_LOOTING_RP - the independent "Ruined Portal with a Looting II+
+     * golden sword within 8 chunks of spawn" side channel (see engine.c's find_looting_ruined_portal),
+     * checked on every seed regardless of the ruined-portal filter's own settings. Never combines
+     * with the AND/OR toggle or the other bits' semantics - it's its own thing entirely, routed to
+     * the seed bank's OP > Looting tab. */
+    public static final int CATEGORY_LOOTING_RP = 1 << 5;
 
     /** Only Village/RuinedPortal/BuriedTreasure can ever be "optional" (see above), so only they
      * count toward "OP" - matching more than the required minimum of one of them at once. */
@@ -62,6 +68,15 @@ public class ExternalEngine {
          * reach a Result at all, since the exe only reports a match when at least one bit is set). */
         public int matchedCategories = 0;
 
+        /** Only meaningful when (matchedCategories & CATEGORY_LOOTING_RP) != 0 - the found
+         * portal's golden sword Looting level, 2 or 3. */
+        public int lootingLevel = 0;
+
+        /** False means this result exists ONLY because of the independent Looting side channel -
+         * it does NOT satisfy the user's actual configured category filter. runAsync's caller
+         * (the single "join now" search) must never auto-join such a result - see SeedFilterMod. */
+        public boolean mainMatched = true;
+
         public Result(long seed, int spawnX, int spawnZ, boolean cheats, boolean creative) {
             this.seed = seed;
             this.spawnX = spawnX;
@@ -80,6 +95,8 @@ public class ExternalEngine {
         boolean cheats, creative;
         Integer rpPortalX, rpPortalZ, rpTemplateIndex, rpRotation, rpMirror, rpChestObsidian;
         int matchedCategories = 0;
+        int lootingLevel = 0;
+        boolean mainMatched = true;
 
         /** Returns true if the line was one of ours (consumed), false if the caller should
          * handle it itself (e.g. "Progress:"). */
@@ -108,6 +125,10 @@ public class ExternalEngine {
                 rpChestObsidian = Integer.parseInt(line.substring("RpChestObsidian:".length()).trim());
             } else if (line.startsWith("MatchedCategories:")) {
                 matchedCategories = Integer.parseInt(line.substring("MatchedCategories:".length()).trim());
+            } else if (line.startsWith("LootingLevel:")) {
+                lootingLevel = Integer.parseInt(line.substring("LootingLevel:".length()).trim());
+            } else if (line.startsWith("MainMatched:")) {
+                mainMatched = line.substring("MainMatched:".length()).trim().equals("1");
             } else {
                 return false;
             }
@@ -121,6 +142,8 @@ public class ExternalEngine {
             }
             Result result = new Result(seed, spawnX, spawnZ, cheats, creative);
             result.matchedCategories = matchedCategories;
+            result.lootingLevel = lootingLevel;
+            result.mainMatched = mainMatched;
             if (rpPortalX != null && rpPortalZ != null && rpTemplateIndex != null && rpRotation != null && rpMirror != null && rpChestObsidian != null) {
                 result.rpFound = true;
                 result.rpPortalX = rpPortalX;
@@ -146,6 +169,8 @@ public class ExternalEngine {
             rpMirror = null;
             rpChestObsidian = null;
             matchedCategories = 0;
+            lootingLevel = 0;
+            mainMatched = true;
         }
     }
 

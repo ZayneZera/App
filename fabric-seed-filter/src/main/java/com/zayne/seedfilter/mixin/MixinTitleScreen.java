@@ -1,7 +1,8 @@
 package com.zayne.seedfilter.mixin;
 
+import com.zayne.seedfilter.MenuNav;
 import com.zayne.seedfilter.SeedFilterMod;
-import com.zayne.seedfilter.gui.SeedBankBrowseScreen;
+import com.zayne.seedfilter.gui.SeedBankCategoryScreen;
 import com.zayne.seedfilter.gui.SeedBankScanScreen;
 import com.zayne.seedfilter.gui.SeedFilterMenuScreen;
 import net.minecraft.client.MinecraftClient;
@@ -40,14 +41,14 @@ public abstract class MixinTitleScreen extends Screen {
         // same as the hotkey, just reachable without remembering it.
         this.addButton(new IconButton(x, singleplayerRowY, size, Items.NETHERITE_BOOTS,
                 button -> SeedFilterMod.startScanAndCreate(MinecraftClient.getInstance(), (Screen) (Object) this),
-                () -> MinecraftClient.getInstance().openScreen(new SeedFilterMenuScreen((Screen) (Object) this))));
+                () -> MenuNav.navigate(MinecraftClient.getInstance(), new SeedFilterMenuScreen((Screen) (Object) this))));
 
         // Directly below the search-and-join button: the seed bank's "find and save, don't join"
         // mode - keeps searching indefinitely and stacking matches instead of stopping at one.
         // Left-click: start a scan. Right-click: skip straight to browsing what's already saved.
         this.addButton(new IconButton(x, singleplayerRowY + size + gap, size, Items.ENDER_CHEST,
                 button -> MinecraftClient.getInstance().openScreen(new SeedBankScanScreen((Screen) (Object) this)),
-                () -> MinecraftClient.getInstance().openScreen(new SeedBankBrowseScreen((Screen) (Object) this))));
+                () -> MenuNav.navigate(MinecraftClient.getInstance(), new SeedBankCategoryScreen((Screen) (Object) this))));
     }
 
     private static class IconButton extends ButtonWidget {

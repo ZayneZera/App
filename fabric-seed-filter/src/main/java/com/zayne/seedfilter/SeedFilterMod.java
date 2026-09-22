@@ -39,17 +39,51 @@ public class SeedFilterMod implements ClientModInitializer {
             client.openScreen(new EngineMissingScreen(titleScreen));
             return;
         }
+        runSearch(client, titleScreen, 1);
+    }
 
+    /** Starts (or restarts, see handleSearchResult) a plain background search ending in
+     * createAndJoin - shared by startScanAndCreate and the "Looting-only, search again"
+     * loop below. attempt is only threaded through for MAX_RP_RETRY_ATTEMPTS bookkeeping. */
+    private static void runSearch(MinecraftClient client, Screen titleScreen, int attempt) {
         AtomicReference<Process> processHolder = new AtomicReference<>();
         EngineStats stats = new EngineStats();
         client.openScreen(new ScanProgressScreen(titleScreen, processHolder, stats));
 
         ExternalEngine.runAsync(processHolder, stats).thenAccept(result ->
-                client.execute(() -> createAndJoin(client, titleScreen, result))
+                client.execute(() -> handleSearchResult(client, titleScreen, result, attempt))
         ).exceptionally(error -> {
             LOGGER.warn("Seed search did not produce a result", error);
             return null;
         });
+    }
+
+    /** Shared by both single-search entry points (startScanAndCreate and CountdownScreen's
+     * "Nächster Seed") once each has a Result in hand. A seed that only matched via the
+     * independent Looting side channel (result.mainMatched == false - see engine.c's
+     * find_looting_ruined_portal) does NOT satisfy the user's actual configured filter, so it must
+     * never be auto-joined ("nicht einfach laden") - it's saved to the seed bank instead and the
+     * search keeps going transparently until a real match turns up. */
+    public static void handleSearchResult(MinecraftClient client, Screen titleScreen, ExternalEngine.Result result, int attempt) {
+        if (!result.mainMatched) {
+            saveToSeedBank(result);
+            LOGGER.info("createAndJoin: result was Looting-only (not a real filter match) - saved to seed bank, searching again");
+            runSearch(client, titleScreen, attempt);
+            return;
+        }
+        if ((result.matchedCategories & ExternalEngine.CATEGORY_LOOTING_RP) != 0) {
+            // Also a genuine primary match, but happens to carry a bonus Looting find too -
+            // record it in the bank as well ("alle wirklich alle Looting-Funde") in addition to
+            // proceeding with the normal join below.
+            saveToSeedBank(result);
+        }
+        createAndJoin(client, titleScreen, result, attempt);
+    }
+
+    private static void saveToSeedBank(ExternalEngine.Result result) {
+        SeedFilterConfig config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
+        SeedBank bank = SeedBank.load(ExternalEngine.getSeedBankPath());
+        bank.add(SeedBankEntry.fromResult(result, config));
     }
 
     /** Max automatic re-searches after a "Not Approved" Ruined Portal verdict before giving up

@@ -2,6 +2,7 @@ package com.zayne.seedfilter.gui;
 
 import com.zayne.seedfilter.EngineStats;
 import com.zayne.seedfilter.ExternalEngine;
+import com.zayne.seedfilter.MenuNav;
 import com.zayne.seedfilter.SeedBank;
 import com.zayne.seedfilter.SeedBankEntry;
 import com.zayne.seedfilter.SeedFilterConfig;
@@ -28,9 +29,7 @@ public class SeedBankScanScreen extends Screen {
     private final AtomicReference<Process> processHolder = new AtomicReference<>();
     private final EngineStats stats = new EngineStats();
     private final SeedBank bank;
-    private final String signature;
-    private final boolean cheats;
-    private final boolean creative;
+    private final SeedFilterConfig config;
 
     private final AtomicInteger totalFound = new AtomicInteger();
     private final AtomicInteger opFound = new AtomicInteger();
@@ -43,11 +42,8 @@ public class SeedBankScanScreen extends Screen {
     public SeedBankScanScreen(Screen parent) {
         super(new LiteralText("Seedbank-Suche"));
         this.parent = parent;
-        SeedFilterConfig config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
+        this.config = SeedFilterConfig.load(ExternalEngine.getConfigPath());
         this.bank = SeedBank.load(ExternalEngine.getSeedBankPath());
-        this.signature = SeedBank.buildSignature(config);
-        this.cheats = config.enableCheats;
-        this.creative = config.creativeMode;
 
         ExternalEngine.runBankSearch(processHolder, stats, this::onMatch, () -> {
             MinecraftClient client = MinecraftClient.getInstance();
@@ -59,7 +55,7 @@ public class SeedBankScanScreen extends Screen {
      * save + counter updates are handed to the client thread since SeedBank isn't otherwise
      * synchronized and this screen's fields are read from render() on the client thread. */
     private void onMatch(ExternalEngine.Result result) {
-        SeedBankEntry entry = SeedBankEntry.fromResult(result, signature, cheats, creative);
+        SeedBankEntry entry = SeedBankEntry.fromResult(result, config);
         MinecraftClient client = MinecraftClient.getInstance();
         client.execute(() -> {
             bank.add(entry);
@@ -84,7 +80,7 @@ public class SeedBankScanScreen extends Screen {
         }));
         this.addButton(new ButtonWidget(this.width / 2 - 75, this.height / 2 + 154, 150, 20,
                 new LiteralText("Seedbank ansehen"), button ->
-                        this.client.openScreen(new SeedBankBrowseScreen(this))));
+                        MenuNav.navigate(this.client, new SeedBankCategoryScreen(this))));
     }
 
     @Override
