@@ -75,33 +75,38 @@ public final class RuinedPortalVerifier {
             // is a WORLDGEN-purpose heightmap that only exists on a ProtoChunk during
             // generation - by the time we get here (world fully generated, player already
             // spawned), that heightmap is gone and sampling it NPEs. Instead of approximating
-            // the placement height, locate the chest directly - its local position (and
-            // therefore world X/Z) is already known exactly, only its Y (== the placement
-            // origin's n) isn't, so scan a generous Y range for it there.
+            // the placement height, locate the chest directly - its local position is known
+            // exactly from the real structure NBT (verified byte-for-byte against Mojang's
+            // ruined_portal/*.nbt files), so this predicts its world column closely - but real-seed
+            // testing found this transformAround/pivot math can still be off by a couple of blocks
+            // in X/Z for some templates (confirmed via a real F3 readout: portal_3, rotation
+            // COUNTERCLOCKWISE_90, was off by exactly 2 in Z - a constant shift, not noise, since
+            // pivotX/pivotZ only ever enter these formulas additively, independent of which local
+            // coordinate is being transformed). Rather than chase the exact vanilla pivot formula
+            // (Mojang's source isn't reachable from here to verify against), search a widened area
+            // around the predicted column for the chest, then apply the SAME (dx,dz) correction
+            // that was needed to find it to every frame cell below - a pivot error is by
+            // construction a uniform translation for a fixed rotation/mirror, so this is exact
+            // however wrong the initial pivot guess was, not an approximation.
             BlockPos chestT = RuinedPortalTemplates.transformAround(template.chestLocal.getX(), template.chestLocal.getY(), template.chestLocal.getZ(), result.rpMirror, result.rpRotation, pivotX, pivotZ);
-            int chestWorldX = chestT.getX() + portalX;
-            int chestWorldZ = chestT.getZ() + portalZ;
-            world.getChunk(chestWorldX >> 4, chestWorldZ >> 4);
-            int roughSurfaceY = world.getChunk(chestWorldX >> 4, chestWorldZ >> 4)
-                    .sampleHeightmap(Heightmap.Type.WORLD_SURFACE, chestWorldX & 15, chestWorldZ & 15);
+            int predictedChestX = chestT.getX() + portalX;
+            int predictedChestZ = chestT.getZ() + portalZ;
 
-            Integer n = null;
-            for (int y = Math.min(255, roughSurfaceY + 20); y >= 1; y--) {
-                if (world.getBlockState(new BlockPos(chestWorldX, y, chestWorldZ)).isOf(Blocks.CHEST)) {
-                    n = y - template.chestLocal.getY();
-                    break;
-                }
-            }
-            if (n == null) {
-                sendErrorMessage(client, "Chest nicht gefunden bei (" + chestWorldX + ",?," + chestWorldZ + ")");
+            BlockPos realChest = findChestNear(world, predictedChestX, predictedChestZ, CHEST_SEARCH_RADIUS);
+            if (realChest == null) {
+                sendErrorMessage(client, "Chest nicht gefunden im Umkreis von " + CHEST_SEARCH_RADIUS
+                        + " um (" + predictedChestX + ",?," + predictedChestZ + ")");
                 return;
             }
+            int correctionDx = realChest.getX() - predictedChestX;
+            int correctionDz = realChest.getZ() - predictedChestZ;
+            int n = realChest.getY() - template.chestLocal.getY();
 
             boolean cryingFound = false;
             int airCount = 0;
             for (RuinedPortalTemplates.FrameCell cell : template.cells) {
                 BlockPos t = RuinedPortalTemplates.transformAround(cell.x, cell.y, cell.z, result.rpMirror, result.rpRotation, pivotX, pivotZ);
-                BlockPos worldPos = new BlockPos(t.getX() + portalX, t.getY() + n, t.getZ() + portalZ);
+                BlockPos worldPos = new BlockPos(t.getX() + portalX + correctionDx, t.getY() + n, t.getZ() + portalZ + correctionDz);
                 world.getChunk(worldPos.getX() >> 4, worldPos.getZ() >> 4);
                 boolean isCrying = world.getBlockState(worldPos).isOf(Blocks.CRYING_OBSIDIAN);
                 boolean isObsidian = world.getBlockState(worldPos).isOf(Blocks.OBSIDIAN);
@@ -118,6 +123,45 @@ public final class RuinedPortalVerifier {
             LOGGER.warn("Ruined Portal frame verification failed", e);
             sendErrorMessage(client, e.getClass().getSimpleName() + ": " + e.getMessage());
         }
+    }
+
+    /** How far (in blocks, Chebyshev distance) to widen the chest search around the
+     * transform-predicted column before giving up - see the long comment above this constant's
+     * only call site for why a widened search is needed at all instead of trusting the predicted
+     * column exactly. 16 comfortably covers every known/plausible pivot-formula error (the one
+     * confirmed case so far was 2 blocks) while staying cheap - a ring search checks the closest
+     * columns first and returns as soon as a chest is found. */
+    private static final int CHEST_SEARCH_RADIUS = 16;
+
+    /** Expanding ring search (closest columns first, so a small real error is found almost
+     * instantly and only a large one pays for the full radius) for a CHEST block near
+     * (centerX, centerZ), scanning each candidate column's full plausible Y range. */
+    private static BlockPos findChestNear(ServerWorld world, int centerX, int centerZ, int maxRadius) {
+        for (int r = 0; r <= maxRadius; r++) {
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != r) {
+                        continue; // only the new outer ring at this radius - inner cells already checked
+                    }
+                    Integer y = findChestY(world, centerX + dx, centerZ + dz);
+                    if (y != null) {
+                        return new BlockPos(centerX + dx, y, centerZ + dz);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private static Integer findChestY(ServerWorld world, int x, int z) {
+        world.getChunk(x >> 4, z >> 4);
+        int roughSurfaceY = world.getChunk(x >> 4, z >> 4).sampleHeightmap(Heightmap.Type.WORLD_SURFACE, x & 15, z & 15);
+        for (int y = Math.min(255, roughSurfaceY + 20); y >= 1; y--) {
+            if (world.getBlockState(new BlockPos(x, y, z)).isOf(Blocks.CHEST)) {
+                return y;
+            }
+        }
+        return null;
     }
 
     private static void sendErrorMessage(MinecraftClient client, String detail) {
